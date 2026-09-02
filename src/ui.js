@@ -24,6 +24,27 @@ function formatDelta(changes = {}) {
     .map(([key, value]) => ({ key, label: METER_LABELS[key] || key, value }));
 }
 
+const NPC_MOOD_LABELS = {
+  happy: "狀態不錯",
+  worried: "有點動搖",
+  tired: "體力見底",
+  quit: "已經離職"
+};
+
+export function managerMood(stress) {
+  if (stress < 30) return "happy";
+  if (stress < 50) return "normal";
+  if (stress < 80) return "tired";
+  return "burning";
+}
+
+export function npcMood(npc) {
+  if (npc.quit) return "quit";
+  if (npc.stamina < 40) return "tired";
+  if (npc.loyalty < 55) return "worried";
+  return "happy";
+}
+
 export class GameUI {
   constructor(root, data, callbacks) {
     this.root = root;
@@ -42,7 +63,8 @@ export class GameUI {
             <div class="life-mark" aria-hidden="true"></div>
             <div class="home-folio">交班紀錄・第 01 冊</div>
           </div>
-          <div class="eyebrow">46 床住宿長照機構・30 天生存紀錄</div>
+          <div class="eyebrow">台灣長照護理長人生模擬器</div>
+          <div class="home-context">46 床住宿長照機構・30 天生存紀錄</div>
           <h1>護理長模擬器<br>今天也沒有標準答案</h1>
           <p class="lead">你有 30 天、每天 5 個行動點，和永遠不夠用的人。品質、士氣、家屬、法規、預算都有人在看。最後那條壓力，通常只有你自己知道。</p>
           <div class="home-stats" aria-label="遊戲概要">
@@ -73,6 +95,7 @@ export class GameUI {
     const activeCount = state.staff.filter(npc => !npc.quit).length;
     const meterOrder = ["quality", "morale", "family", "compliance", "budget"];
     const event = engine.currentEvent();
+    const staffViews = this.getStaffViews(state);
 
     this.root.innerHTML = `
       <main class="game">
@@ -96,15 +119,20 @@ export class GameUI {
         </section>
 
         <div class="game-main">
-          <div class="status-strip">
-            <span class="team-status ${state.staffShortage ? "shortage" : ""}"><i aria-hidden="true"></i>在職 ${activeCount} / ${state.staff.length}${state.staffShortage ? "・人力缺口中" : ""}</span>
-            <nav aria-label="遊戲選單">
-              <button id="staffBtn">名冊</button>
-              <button id="achievementBtn">成就</button>
-              <button id="homeBtn">首頁</button>
-            </nav>
+          <div class="world-layout">
+            ${this.renderScene(state, staffViews)}
+            <div class="play-column">
+              <div class="status-strip">
+                <span class="team-status ${state.staffShortage ? "shortage" : ""}"><i aria-hidden="true"></i>在職 ${activeCount} / ${state.staff.length}${state.staffShortage ? "・人力缺口中" : ""}</span>
+                <nav aria-label="遊戲選單">
+                  <button id="staffBtn">名冊</button>
+                  <button id="achievementBtn">成就</button>
+                  <button id="homeBtn">首頁</button>
+                </nav>
+              </div>
+              ${state.phase === "events" && event ? this.renderEvent(engine, event) : this.renderActions(engine)}
+            </div>
           </div>
-          ${state.phase === "events" && event ? this.renderEvent(engine, event) : this.renderActions(engine)}
         </div>
 
         <section class="stress-dock" aria-label="你的壓力">
@@ -118,6 +146,7 @@ export class GameUI {
       </main>`;
 
     this.bindGameEvents(engine);
+    this.applySceneAssets();
     this.animateMeterChanges(state.meters);
     this.previousMeters = structuredClone(state.meters);
   }
@@ -129,6 +158,60 @@ export class GameUI {
       const active = slot <= state.ap;
       return `<span class="ap-dot ${active ? "used" : ""}" style="${locked ? "opacity:.25" : ""}" aria-hidden="true"></span>`;
     }).join("");
+  }
+
+  getStaffViews(state) {
+    const definitions = new Map((this.data.staff?.staff || []).map(npc => [npc.id, npc]));
+    return state.staff.map((npc, index) => {
+      const definition = definitions.get(npc.id) || {};
+      return {
+        ...definition,
+        ...npc,
+        spriteRow: definition.spriteRow ?? npc.spriteRow ?? index,
+        scene: { ...(definition.scene || {}), ...(npc.scene || {}) },
+        thoughts: { ...(definition.thoughts || {}), ...(npc.thoughts || {}) }
+      };
+    });
+  }
+
+  renderScene(state, staffViews) {
+    const visuals = this.data.staff?.visuals || {};
+    const manager = this.data.staff?.manager || { name: "你", role: "護理長", thoughts: {} };
+    const mood = managerMood(state.meters.stress);
+    const managerThought = manager.thoughts?.[mood] || "先處理眼前這件。";
+
+    return `
+      <section class="sim-scene" aria-label="護理站人物場景">
+        <img class="scene-background" src="${esc(visuals.sceneImage || "")}" alt="台灣長照機構護理站，桌上有電腦、交班本、電話、藥車、文件與飲料">
+        <div class="scene-shade" aria-hidden="true"></div>
+        <div class="manager-figure manager-${mood}">
+          <div class="manager-thought">${esc(managerThought)}</div>
+          <div class="manager-sprite" aria-hidden="true"></div>
+          <div class="manager-label"><strong>${esc(manager.name)}</strong><span>${esc(manager.role)}</span></div>
+        </div>
+        ${staffViews.map((npc, index) => {
+          const moodName = npcMood(npc);
+          const x = Number.isFinite(Number(npc.scene?.x)) ? Number(npc.scene.x) : 12 + index * 14;
+          const y = Number.isFinite(Number(npc.scene?.y)) ? Number(npc.scene.y) : 25 + index % 2 * 40;
+          const scale = Number.isFinite(Number(npc.scene?.scale)) ? Number(npc.scene.scale) : 1;
+          const spriteRow = Math.max(0, Math.min(5, Number(npc.spriteRow) || 0));
+          return `<button class="npc-figure mood-${moodName}" data-npc="${esc(npc.id)}" style="--scene-x:${x}%;--scene-y:${y}%;--scene-scale:${scale};--sprite-y:${spriteRow * 20}%" aria-label="${esc(npc.name)}，${esc(npc.role)}，${esc(NPC_MOOD_LABELS[moodName])}">
+            <span class="npc-sprite" aria-hidden="true"></span>
+            <span class="npc-name">${esc(npc.name)}</span>
+            <span class="npc-state-dot" aria-hidden="true"></span>
+          </button>`;
+        }).join("")}
+        <div class="scene-tip">點同仁看看他在想什麼</div>
+      </section>`;
+  }
+
+  applySceneAssets() {
+    const visuals = this.data.staff?.visuals || {};
+    const managerSprite = this.root.querySelector(".manager-sprite");
+    if (managerSprite && visuals.managerSprite) managerSprite.style.backgroundImage = `url("${visuals.managerSprite}")`;
+    this.root.querySelectorAll(".npc-sprite").forEach(sprite => {
+      if (visuals.staffSprite) sprite.style.backgroundImage = `url("${visuals.staffSprite}")`;
+    });
   }
 
   renderMeter(key, value) {
@@ -145,7 +228,7 @@ export class GameUI {
     const burning = state.meters.stress >= 80;
     const fatigue = state.meters.stress >= 50 && state.meters.stress < 80 && state.fortune?.fatigueAside;
     return `
-      <article class="event-paper page-flip">
+      <article class="event-paper event-slip">
         <span class="paper-clip" aria-hidden="true"></span>
         <div class="event-meta">
           <div class="event-tags">
@@ -206,6 +289,50 @@ export class GameUI {
     this.root.querySelector("#staffBtn")?.addEventListener("click", () => this.showStaff(engine.state));
     this.root.querySelector("#achievementBtn")?.addEventListener("click", () => this.showAchievements());
     this.root.querySelector("#homeBtn")?.addEventListener("click", this.callbacks.onHome);
+    this.root.querySelectorAll("[data-npc]").forEach(button => {
+      button.addEventListener("click", () => this.showNpc(engine.state, button.dataset.npc));
+    });
+  }
+
+  showNpc(state, npcId) {
+    const returnFocus = document.activeElement;
+    const npc = this.getStaffViews(state).find(item => item.id === npcId);
+    if (!npc) return;
+    const mood = npcMood(npc);
+    const thought = npc.thoughts?.[mood] || npc.thoughts?.happy || "先把今天撐過去。";
+    const spriteRow = Math.max(0, Math.min(5, Number(npc.spriteRow) || 0));
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `
+      <section class="overlay-paper npc-paper" role="dialog" aria-modal="true" aria-labelledby="npcTitle" tabindex="-1">
+        <div class="npc-card-head">
+          <div class="npc-portrait mood-${mood}" style="--sprite-y:${spriteRow * 20}%"><div class="npc-sprite" aria-hidden="true"></div></div>
+          <div>
+            <div class="eyebrow">${esc(npc.role)}</div>
+            <h2 id="npcTitle">${esc(npc.name)}</h2>
+            <div class="npc-trait">${esc(npc.trait)}・${esc(NPC_MOOD_LABELS[mood])}</div>
+          </div>
+        </div>
+        <p class="npc-trait-desc">${esc(npc.traitDesc)}</p>
+        <blockquote class="npc-thought-line">「${esc(thought)}」</blockquote>
+        <div class="npc-detail-bars">
+          <div class="npc-detail-row"><span>體力</span><div class="npc-detail-track"><i style="width:${npc.stamina}%"></i></div><strong>${npc.stamina}</strong></div>
+          <div class="npc-detail-row"><span>忠誠</span><div class="npc-detail-track loyalty"><i style="width:${npc.loyalty}%"></i></div><strong>${npc.loyalty}</strong></div>
+        </div>
+        <button class="secondary-btn" id="closeNpc">回到護理站</button>
+      </section>`;
+    document.body.appendChild(overlay);
+    const sprite = overlay.querySelector(".npc-sprite");
+    const staffSprite = this.data.staff?.visuals?.staffSprite;
+    if (sprite && staffSprite) sprite.style.backgroundImage = `url("${staffSprite}")`;
+    const close = () => {
+      overlay.remove();
+      returnFocus?.focus?.({ preventScroll: true });
+    };
+    overlay.querySelector("#closeNpc").addEventListener("click", close);
+    overlay.addEventListener("click", event => { if (event.target === overlay) close(); });
+    overlay.addEventListener("keydown", event => { if (event.key === "Escape") close(); });
+    overlay.querySelector(".npc-paper").focus({ preventScroll: true });
   }
 
   showDawn(state, quitters = [], onContinue) {
@@ -261,13 +388,17 @@ export class GameUI {
       <section class="overlay-paper" role="dialog" aria-modal="true" aria-labelledby="staffTitle" tabindex="-1">
         <h2 id="staffTitle">今天還在的人</h2>
         <div class="staff-list">
-          ${state.staff.map(npc => `
+          ${this.getStaffViews(state).map(npc => {
+            const mood = npcMood(npc);
+            const thought = npc.thoughts?.[mood] || npc.thoughts?.happy || "先把今天撐過去。";
+            return `
             <div class="staff-row ${npc.quit ? "quit" : ""}">
               <div class="staff-top"><span class="staff-avatar" aria-hidden="true">${esc(npc.name.slice(0, 1))}</span><strong>${esc(npc.name)}</strong><span class="staff-role">${esc(npc.role)}・${esc(npc.trait)}</span></div>
               <div class="staff-bars"><span>體力</span><div class="staff-mini-track"><div class="staff-mini-fill" style="width:${npc.stamina}%"></div></div><span>${npc.stamina}</span></div>
               <div class="staff-bars"><span>忠誠</span><div class="staff-mini-track"><div class="staff-mini-fill" style="width:${npc.loyalty}%"></div></div><span>${npc.loyalty}</span></div>
-              <small>${esc(npc.traitDesc)}</small>
-            </div>`).join("")}
+              <small>${esc(npc.traitDesc)}</small><em>「${esc(thought)}」</em>
+            </div>`;
+          }).join("")}
         </div>
         <button class="secondary-btn" id="closeOverlay">闔上名冊</button>
       </section>`;

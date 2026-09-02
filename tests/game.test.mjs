@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
@@ -23,6 +24,7 @@ const { GameEngine } = await import("../src/engine.js");
 const { createInitialState, loadAchievements, loadSave } = await import("../src/state.js");
 const { drawDailyEvents, weightedDraw } = await import("../src/deck.js");
 const { markPendingQuits, processMorningQuits } = await import("../src/staff.js");
+const { managerMood, npcMood } = await import("../src/ui.js");
 
 async function readJSON(relativePath) {
   return JSON.parse(await readFile(new URL(relativePath, import.meta.url), "utf8"));
@@ -135,6 +137,30 @@ test("data files have valid references and supported fields", () => {
   const roles = new Set(data.staff.staff.map(item => item.role));
   const actionIds = new Set(data.actions.map(item => item.id));
 
+  assert(data.staff.staff.length === 6, `預期 6 位 NPC，實際 ${data.staff.staff.length}`);
+  assert(data.staff.manager?.name && data.staff.manager?.role, "護理長顯示資料不完整");
+  for (const mood of ["happy", "normal", "tired", "burning"]) {
+    assert(data.staff.manager.thoughts?.[mood], `護理長缺少 ${mood} 心聲`);
+  }
+  for (const [key, assetPath] of Object.entries(data.staff.visuals || {})) {
+    assert(assetPath.startsWith("./assets/"), `${key} 必須使用 assets/ 相對路徑`);
+    assert(existsSync(new URL(`../${assetPath.slice(2)}`, import.meta.url)), `${key} 素材不存在：${assetPath}`);
+  }
+  assert(Object.keys(data.staff.visuals || {}).length === 3, "場景、護理長與同仁素材路徑必須齊全");
+
+  const spriteRows = new Set();
+  for (const npc of data.staff.staff) {
+    assert(Number.isInteger(npc.spriteRow) && npc.spriteRow >= 0, `${npc.id} spriteRow 無效`);
+    spriteRows.add(npc.spriteRow);
+    assert(Number.isFinite(npc.scene?.x) && npc.scene.x >= 0 && npc.scene.x <= 100, `${npc.id} 場景 x 無效`);
+    assert(Number.isFinite(npc.scene?.y) && npc.scene.y >= 0 && npc.scene.y <= 100, `${npc.id} 場景 y 無效`);
+    assert(Number.isFinite(npc.scene?.scale) && npc.scene.scale > 0, `${npc.id} 場景 scale 無效`);
+    for (const mood of ["happy", "worried", "tired", "quit"]) {
+      assert(npc.thoughts?.[mood], `${npc.id} 缺少 ${mood} 心聲`);
+    }
+  }
+  assert(spriteRows.size === data.staff.staff.length, "NPC spriteRow 不可重複");
+
   assert(data.events.length === 22, `預期 22 張事件，實際 ${data.events.length}`);
   for (const event of data.events) {
     assert(event.id && !eventIds.has(event.id), `事件 id 重複或空白：${event.id}`);
@@ -172,6 +198,18 @@ test("data files have valid references and supported fields", () => {
   for (const fortune of data.fortunes) {
     if (fortune.modifier?.action) assert(actionIds.has(fortune.modifier.action), `運勢指向不存在行動 ${fortune.modifier.action}`);
   }
+});
+
+test("manager and NPC visual moods follow meter thresholds", () => {
+  assert(managerMood(0) === "happy" && managerMood(29) === "happy", "壓力 0–29 應為開心");
+  assert(managerMood(30) === "normal" && managerMood(49) === "normal", "壓力 30–49 應為普通");
+  assert(managerMood(50) === "tired" && managerMood(79) === "tired", "壓力 50–79 應為疲累");
+  assert(managerMood(80) === "burning" && managerMood(99) === "burning", "壓力 80–99 應為燃燒中");
+
+  assert(npcMood({ stamina: 70, loyalty: 70 }) === "happy", "體力與忠誠正常應為開心");
+  assert(npcMood({ stamina: 39, loyalty: 70 }) === "tired", "體力低於 40 應為疲累");
+  assert(npcMood({ stamina: 70, loyalty: 54 }) === "worried", "忠誠低於 55 應為動搖");
+  assert(npcMood({ stamina: 90, loyalty: 90, quit: true }) === "quit", "離職狀態應優先顯示");
 });
 
 test("days 1-5 draw one event and stress 80 reduces AP to 3", () => {

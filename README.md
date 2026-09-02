@@ -1,6 +1,6 @@
 # 護理長模擬器：今天也沒有標準答案
 
-純前端、資料驅動的 30 天回合制文字策略遊戲。無 npm、無 bundler、無後端，可直接部署至 GitHub Pages。
+純前端、資料驅動的 30 天台灣長照護理長人生模擬遊戲。以原創 Q 版人物、護理站場景和事件紙卡呈現；無 npm、無 bundler、無後端，可直接部署至 GitHub Pages。
 
 ## 啟動
 
@@ -36,12 +36,20 @@ node tests/game.test.mjs
 
 - `events.json`：事件卡（目前 22 張：16 張隨機事件 + 6 張 follow-up）
 - `actions.json`：行動與效果
-- `staff.json`：NPC 與離職設定
+- `staff.json`：NPC、護理長與場景顯示資料（人物位置、表情列、心聲、素材路徑）及離職設定
 - `fortune.json`：今日運勢
 - `achievements.json`：成就與條件
 - `endings.json`：結局、條件與文案
 
 新增一般事件卡不需要修改 `.js`。引擎只讀取欄位、判斷條件並執行效果。
+
+原創場景與人物圖集位於 `assets/`：
+
+- `nursing-station.png`：台灣長照機構護理站場景
+- `nurse-manager-states.png`：護理長四種壓力表情
+- `staff-states.png`：六位 NPC 的開心、動搖、疲累表情
+
+NPC 仍由 `data/staff.json` 產生，沒有把姓名、角色或場景位置寫死在 JavaScript。
 
 ## 主要規則已實作
 
@@ -58,6 +66,10 @@ node tests/game.test.mjs
 - 12 項 localStorage 跨局成就
 - 7 種結局優先判定
 - 每日結算與操作時自動存檔
+- 依壓力切換護理長四種表情；依體力／忠誠切換 NPC 狀態
+- 場景人物可點選查看職類、特質、體力、忠誠與目前心聲
+- 事件卡以交班紙張滑出的動畫出場
+- 375px 手機寬度可完整操作
 - `prefers-reduced-motion`
 
 ## localStorage
