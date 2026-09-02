@@ -1,0 +1,99 @@
+{
+  "visuals": {
+    "visitorSprite": "./assets/visitors.png"
+  },
+  "hotspots": [
+    {
+      "id": "computer",
+      "label": "護理站電腦",
+      "glyph": "⌨",
+      "x": 68,
+      "y": 55,
+      "actionId": "paperwork",
+      "sound": "keyboard",
+      "description": "補紀錄、追簽名，並確認每個 final 到底是不是 final。"
+    },
+    {
+      "id": "handover_book",
+      "label": "交班本",
+      "glyph": "本",
+      "x": 54,
+      "y": 78,
+      "actionId": "morning_huddle",
+      "sound": "paper",
+      "description": "快速核對高風險住民、今日就醫、傷口與未完成事項。"
+    },
+    {
+      "id": "phone",
+      "label": "電話",
+      "glyph": "☎",
+      "x": 43,
+      "y": 71,
+      "actionId": "family_meeting",
+      "sound": "phone",
+      "description": "接起來。可能是家屬，也可能是主任問你為什麼還沒回信。"
+    },
+    {
+      "id": "med_cart",
+      "label": "藥車",
+      "glyph": "藥",
+      "x": 87,
+      "y": 65,
+      "actionId": "check_medcart",
+      "sound": "drawer",
+      "description": "核對效期、冰箱溫度、管制藥品與不該出現在這裡的那包餅乾。"
+    },
+    {
+      "id": "meeting_binder",
+      "label": "會議資料夾",
+      "glyph": "議",
+      "x": 25,
+      "y": 62,
+      "actionId": "management_meeting",
+      "sound": "paper",
+      "description": "開一場有議程、有紀錄，也真的有人負責追蹤的會議。"
+    },
+    {
+      "id": "drink",
+      "label": "飲料",
+      "glyph": "飲",
+      "x": 72,
+      "y": 78,
+      "actionId": "order_drinks",
+      "sound": "drink",
+      "description": "液態團隊支持。甜度冰塊通常比議程更快取得共識。"
+    }
+  ],
+  "visitors": [
+    {
+      "id": "director_lin",
+      "name": "林主任",
+      "role": "機構主任",
+      "trait": "一句話三個待辦",
+      "description": "關心數字、成本與董事會，但偶爾也記得你是一個人。",
+      "spriteColumn": 0,
+      "scene": { "x": 86, "y": 46, "scale": 1 },
+      "defaultLine": "護理長，等一下來我辦公室一下。"
+    },
+    {
+      "id": "supervisor_chen",
+      "name": "陳督導",
+      "role": "護理督導",
+      "trait": "專看沒簽名那格",
+      "description": "臨床經驗很深，翻紀錄的速度比你解釋的速度更快。",
+      "spriteColumn": 1,
+      "scene": { "x": 84, "y": 45, "scale": 1 },
+      "defaultLine": "這一格，為什麼沒有追蹤紀錄？"
+    },
+    {
+      "id": "inspector_wu",
+      "name": "吳稽查員",
+      "role": "衛生局稽查員",
+      "trait": "說隨機就真的隨機",
+      "description": "查核不是找你麻煩；只是每個問題聽起來都很像找你麻煩。",
+      "spriteColumn": 2,
+      "scene": { "x": 85, "y": 45, "scale": 1 },
+      "defaultLine": "不用特別準備，我們就隨機看幾份。"
+    }
+  ]
+}

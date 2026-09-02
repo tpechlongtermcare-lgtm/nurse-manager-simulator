@@ -1,11 +1,14 @@
 import { createInitialState, loadSave, clearSave } from "./state.js";
 import { GameEngine } from "./engine.js";
 import { GameUI } from "./ui.js";
+import { GameAudio } from "./audio.js";
 
 const root = document.querySelector("#app");
 let data = null;
 let engine = null;
 let ui = null;
+const audio = new GameAudio();
+let lastEventCue = "";
 
 async function loadJSON(path) {
   const response = await fetch(path, { cache: "no-store" });
@@ -14,15 +17,24 @@ async function loadJSON(path) {
 }
 
 async function loadData() {
-  const [events, actions, staff, fortunes, achievements, endings] = await Promise.all([
+  const [events, actions, staff, scene, fortunes, achievements, endings] = await Promise.all([
     loadJSON("./data/events.json"),
     loadJSON("./data/actions.json"),
     loadJSON("./data/staff.json"),
+    loadJSON("./data/scene.json"),
     loadJSON("./data/fortune.json"),
     loadJSON("./data/achievements.json"),
     loadJSON("./data/endings.json")
   ]);
-  return { events, actions, staff, fortunes, achievements, endings };
+  return { events, actions, staff, scene, fortunes, achievements, endings };
+}
+
+function renderCurrentGame() {
+  ui.renderGame(engine);
+  const event = engine.currentEvent();
+  const cueKey = event ? `${engine.state.day}:${event.id}` : "";
+  if (cueKey && cueKey !== lastEventCue) audio.playEvent(event);
+  lastEventCue = cueKey;
 }
 
 function createUI() {
@@ -32,8 +44,17 @@ function createUI() {
     onChoice: handleChoice,
     onAction: handleAction,
     onSettle: settleDay,
-    onHome: showHome
+    onHome: showHome,
+    onSceneAction: handleSceneAction,
+    onSoundToggle: toggleSound,
+    isSoundEnabled: () => audio.isEnabled()
   });
+}
+
+function toggleSound() {
+  audio.toggle();
+  if (engine && engine.state.phase !== "ended") renderCurrentGame();
+  else showHome();
 }
 
 function showHome() {
@@ -42,9 +63,11 @@ function showHome() {
 
 function startNewGame() {
   clearSave();
+  lastEventCue = "";
   engine = new GameEngine(createInitialState(data.staff), data);
   const { quitters, ending } = engine.beginDay();
-  ui.showDawn(engine.state, quitters, () => ending ? ui.renderEnding(engine) : ui.renderGame(engine));
+  audio.play("dawn");
+  ui.showDawn(engine.state, quitters, () => ending ? ui.renderEnding(engine) : renderCurrentGame());
 }
 
 function continueGame() {
@@ -57,22 +80,26 @@ function continueGame() {
   }
   if (engine.state.phase === "dawn") {
     const { quitters, ending } = engine.beginDay();
-    ui.showDawn(engine.state, quitters, () => ending ? ui.renderEnding(engine) : ui.renderGame(engine));
+    audio.play("dawn");
+    ui.showDawn(engine.state, quitters, () => ending ? ui.renderEnding(engine) : renderCurrentGame());
     return;
   }
-  ui.renderGame(engine);
+  renderCurrentGame();
 }
 
 function handleChoice(index) {
+  audio.play("click");
   const outcome = engine.choose(index);
   if (!outcome || outcome.error) return;
+  audio.play("result");
   ui.showResult(outcome.result, outcome.changes, () => {
     if (outcome.ending) ui.renderEnding(engine);
-    else ui.renderGame(engine);
+    else renderCurrentGame();
   });
 }
 
-function handleAction(actionId) {
+function handleAction(actionId, sound = "click") {
+  audio.play(sound);
   const outcome = engine.performAction(actionId);
   if (!outcome || outcome.error) return;
   ui.showToast(outcome.changes);
@@ -85,7 +112,11 @@ function handleAction(actionId) {
     settleDay();
     return;
   }
-  ui.renderGame(engine);
+  renderCurrentGame();
+}
+
+function handleSceneAction(actionId, sound) {
+  handleAction(actionId, sound || "click");
 }
 
 function settleDay() {
@@ -95,7 +126,8 @@ function settleDay() {
     return;
   }
   const { quitters, ending } = engine.beginDay();
-  ui.showDawn(engine.state, quitters, () => ending ? ui.renderEnding(engine) : ui.renderGame(engine));
+  audio.play("dawn");
+  ui.showDawn(engine.state, quitters, () => ending ? ui.renderEnding(engine) : renderCurrentGame());
 }
 
 try {

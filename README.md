@@ -28,15 +28,16 @@ python3 -m http.server 8000
 node tests/game.test.mjs
 ```
 
-測試包含抽牌、AP、follow-up、NPC 離職、成就、結局、存檔，以及 100 局固定亂數的 30 天流程模擬；不需要安裝 npm 套件。
+測試包含抽牌、AP、follow-up、NPC 離職、成就、結局、存檔、聲音偏好與互動場景資料，以及 100 局固定亂數的 30 天流程模擬；不需要安裝 npm 套件。
 
 ## 資料驅動
 
 遊戲內容都在 `data/`：
 
-- `events.json`：事件卡（目前 22 張：16 張隨機事件 + 6 張 follow-up）
+- `events.json`：事件卡（目前 27 張：14 張日常、6 張危機、7 張 follow-up）
 - `actions.json`：行動與效果
 - `staff.json`：NPC、護理長與場景顯示資料（人物位置、表情列、心聲、素材路徑）及離職設定
+- `scene.json`：護理站可互動物件、主任／督導／稽查員資料、場景位置與行動連結
 - `fortune.json`：今日運勢
 - `achievements.json`：成就與條件
 - `endings.json`：結局、條件與文案
@@ -48,6 +49,7 @@ node tests/game.test.mjs
 - `nursing-station.png`：台灣長照機構護理站場景
 - `nurse-manager-states.png`：護理長四種壓力表情
 - `staff-states.png`：六位 NPC 的開心、動搖、疲累表情
+- `visitors.png`：主任、護理督導與衛生局稽查員
 
 NPC 仍由 `data/staff.json` 產生，沒有把姓名、角色或場景位置寫死在 JavaScript。
 
@@ -68,6 +70,10 @@ NPC 仍由 `data/staff.json` 產生，沒有把姓名、角色或場景位置寫
 - 每日結算與操作時自動存檔
 - 依壓力切換護理長四種表情；依體力／忠誠切換 NPC 狀態
 - 場景人物可點選查看職類、特質、體力、忠誠與目前心聲
+- 護理站六個物件可直接互動並消耗 AP：電腦、交班本、電話、藥車、會議資料夾、飲料
+- 主任、護理督導與衛生局稽查員會依事件走進場景，可點選查看對話
+- 加入主任巡房、耗材會議、督導抽查、跨團隊會議與真正無預警的衛生局臨時稽核
+- 使用 Web Audio 產生紙張、電話、警示、按鍵與結果音效，首頁及遊戲中皆可切換
 - 事件卡以交班紙張滑出的動畫出場
 - 375px 手機寬度可完整操作
 - `prefers-reduced-motion`
@@ -76,6 +82,7 @@ NPC 仍由 `data/staff.json` 產生，沒有把姓名、角色或場景位置寫
 
 - `nurseSim.save.v1`
 - `nurseSim.achievements.v1`
+- `nurseSim.sound.v1`
 
 ## 版權與免責
 

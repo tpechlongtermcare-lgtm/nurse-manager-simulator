@@ -86,6 +86,33 @@
     "effect": { "quality": 3, "budget": -5, "compliance": 3 }
   },
   {
+    "id": "morning_huddle",
+    "name": "翻交班本開短會",
+    "desc": "十分鐘對焦高風險住民與今天不能漏掉的事。希望真的是十分鐘。",
+    "ap": 1,
+    "oncePerDay": true,
+    "sceneOnly": true,
+    "effect": { "quality": 4, "morale": 4, "compliance": 2, "stress": 2 }
+  },
+  {
+    "id": "check_medcart",
+    "name": "抽查藥車",
+    "desc": "核對效期、冰箱溫度與管制藥品。也核對自己的血壓。",
+    "ap": 1,
+    "oncePerDay": true,
+    "sceneOnly": true,
+    "effect": { "quality": 4, "compliance": 5, "morale": -2, "stress": 3 }
+  },
+  {
+    "id": "management_meeting",
+    "name": "召開追蹤會議",
+    "desc": "不是為了留下紀錄才開；但沒有紀錄，等於沒開。",
+    "ap": 2,
+    "oncePerDay": true,
+    "sceneOnly": true,
+    "effect": { "quality": 3, "compliance": 7, "morale": -3, "stress": 6 }
+  },
+  {
     "id": "go_home",
     "name": "準時下班",
     "desc": "一個看似普通、實際上極具政治性的選項。",

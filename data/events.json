@@ -51,6 +51,9 @@
     "text": "長官要一份近三個月的人力、品質、家屬滿意與教育訓練彙整。附件有六個 Excel，檔名都叫 final。",
     "tags": ["長官", "法規", "日常"],
     "type": "daily",
+    "actor": "director_lin",
+    "actorLine": "護理長，這份資料今天下班前給我。",
+    "sound": "phone",
     "weight": 11,
     "oneShot": false,
     "choices": [
@@ -199,18 +202,21 @@
   },
   {
     "id": "audit_visit",
-    "title": "衛生局明天來",
-    "subtitle": "「臨時關懷訪視，不用特別準備。」",
-    "text": "訊息下午四點二十七分進來。你看了一眼文件櫃，文件櫃也看著你。",
+    "title": "衛生局已經到門口",
+    "subtitle": "「我們臨時稽核，現在開始。」",
+    "text": "吳稽查員要隨機抽三份住民照顧紀錄，再看藥品冰箱溫度、感染管制名冊與消防走道。護理站所有抽屜突然都有了道德壓力。",
     "tags": ["法規", "長官", "危機"],
     "type": "crisis",
+    "actor": "inspector_wu",
+    "actorLine": "不用特別準備，先隨機抽三份紀錄。",
+    "sound": "alert",
     "weight": 9,
     "oneShot": true,
     "condition": { "minDay": 8 },
     "choices": [
-      { "label": "今晚全部補完", "effect": { "compliance": 14, "stress": 18, "morale": -3 }, "result": "凌晨一點，你發現 3 月份有一格沒簽名。你居然笑了。" },
-      { "label": "照常上班，缺什麼就承認", "effect": { "compliance": -7, "stress": -1 }, "result": "你選擇相信平常。七天後會知道平常相不相信你。", "followUp": { "id": "audit_deficiency", "delay": 7 } },
-      { "label": "請大家一起留下來", "effect": { "compliance": 10, "morale": -10, "budget": -8, "stress": 9 }, "result": "大家都留下來了。沒有人問晚餐吃什麼。", "npcEffect": { "role": "照服員", "stamina": -10, "loyalty": -4 } }
+      { "label": "照平時紀錄直接提供", "effect": { "compliance": 7, "quality": 4, "stress": 10 }, "result": "你把系統打開。第一份完整，第二份少一個簽名，第三份讓所有人同時安靜。" },
+      { "label": "分工陪查、立即補佐證", "effect": { "compliance": 12, "morale": -7, "stress": 15 }, "result": "怡君顧紀錄、麗雪找附件、你陪走現場。大家突然非常知道自己的名字。", "requireAP": 1, "npcEffect": { "role": "護理師", "stamina": -8, "loyalty": -2 } },
+      { "label": "缺什麼就誠實列入改善", "effect": { "compliance": -4, "quality": 3, "stress": 6 }, "result": "你沒有演出完美機構。七天後，改善期限還是會準時抵達。", "followUp": { "id": "audit_deficiency", "delay": 7 } }
     ]
   },
   {
@@ -236,6 +242,9 @@
     "text": "進食狀況持續下降。家屬希望放置鼻胃管，住民在溝通時反覆表示不要。護理站突然變得很安靜。",
     "tags": ["家屬", "住民", "危機"],
     "type": "crisis",
+    "actor": "supervisor_chen",
+    "actorLine": "先別急著選邊，把住民意願寫進來。",
+    "sound": "paper",
     "weight": 7,
     "oneShot": true,
     "condition": { "minDay": 8 },
@@ -259,6 +268,82 @@
       { "label": "照流程通報職災", "effect": { "compliance": 8, "morale": 5, "budget": -5, "stress": 6 }, "result": "表單很多，但至少他知道受傷不是一種個人失敗。", "npcEffect": { "role": "照服員", "stamina": -12, "loyalty": 4 } },
       { "label": "先私下處理就好", "effect": { "compliance": -10, "stress": 2 }, "result": "今天少了一張表。十天後可能多很多張。", "followUp": { "id": "injury_claim", "delay": 10 }, "npcEffect": { "role": "照服員", "stamina": -14, "loyalty": -8 } },
       { "label": "叫他今天休息，明天再看", "effect": { "morale": 2, "quality": -3, "stress": 1 }, "result": "他說好。你們兩個都希望睡一覺真的有那麼萬能。", "followUp": { "id": "injury_claim", "delay": 10 }, "npcEffect": { "role": "照服員", "stamina": -18, "loyalty": -4 } }
+    ]
+  },
+  {
+    "id": "director_rounding",
+    "title": "主任站在護理站後面沒有說話",
+    "subtitle": "她看了班表，再看了一眼走廊。",
+    "text": "林主任問早班為什麼只剩這幾個人、昨天的客訴回覆了沒，最後補一句：『我只是關心，不是找碴。』",
+    "tags": ["長官", "人力", "日常"],
+    "type": "daily",
+    "actor": "director_lin",
+    "actorLine": "我只是關心。昨天的客訴回覆了嗎？",
+    "sound": "paper",
+    "weight": 10,
+    "oneShot": false,
+    "condition": { "minDay": 2 },
+    "choices": [
+      { "label": "拿出班表與事件紀錄逐項說明", "effect": { "compliance": 5, "quality": 3, "stress": 8 }, "result": "主任點了兩次頭，圈了三個地方，留下四件要追蹤的事。", "requireAP": 1 },
+      { "label": "先陪她走現場再談數字", "effect": { "quality": 5, "morale": 3, "stress": 6 }, "result": "她看見現場真的很忙。她仍然希望報表準時。兩件事可以同時成立。" },
+      { "label": "說明今天人力不足，請她協調支援", "effect": { "morale": 6, "budget": -5, "stress": 4 }, "result": "主任打了兩通電話。支援下午才到，但同仁第一次看見長官也會打電話。", "npcEffect": { "role": "照服員", "loyalty": 4 } }
+    ]
+  },
+  {
+    "id": "supervisor_record_review",
+    "title": "督導抽到最不想被抽的那一份",
+    "subtitle": "「這個傷口換藥後，追蹤紀錄在哪裡？」",
+    "text": "陳督導從一疊紀錄裡精準抽出有問題的那本。缺的不是照護，而是評估、處置、追蹤之間少了一段可以被看見的證據。",
+    "tags": ["督導", "法規", "日常"],
+    "type": "daily",
+    "actor": "supervisor_chen",
+    "actorLine": "我知道有做；問題是紀錄看不出來。",
+    "sound": "paper",
+    "weight": 10,
+    "oneShot": false,
+    "condition": { "minDay": 3 },
+    "choices": [
+      { "label": "立刻找當班同仁一起還原紀錄", "effect": { "compliance": 8, "quality": 4, "morale": -3, "stress": 7 }, "result": "時間、照片、處置終於接起來。沒有人喜歡補紀錄，但大家知道這次補的是什麼。", "requireAP": 1, "npcEffect": { "role": "護理師", "stamina": -5, "loyalty": -1 } },
+      { "label": "請督導直接示範一份完整寫法", "effect": { "compliance": 6, "morale": 4, "stress": 4 }, "result": "她真的坐下來寫了一份。護理站第一次覺得督導的紅筆也能用來教學。" },
+      { "label": "先口頭說明，紀錄晚點補", "effect": { "compliance": -5, "stress": 2 }, "result": "督導把那一頁貼了標籤。七天後，標籤會帶朋友回來。", "followUp": { "id": "audit_deficiency", "delay": 7 } }
+    ]
+  },
+  {
+    "id": "director_budget_meeting",
+    "title": "主任說這場會議只要二十分鐘",
+    "subtitle": "投影幕第一頁寫著：耗材成本檢討。",
+    "text": "尿布、手套、營養品與加班費都超過預估。主任要你提出改善，但現場每一筆超支後面都站著一個需要被照顧的人。",
+    "tags": ["長官", "會議", "預算"],
+    "type": "daily",
+    "actor": "director_lin",
+    "actorLine": "不是要你少用，是要你合理地少用。",
+    "sound": "phone",
+    "weight": 8,
+    "oneShot": false,
+    "condition": { "minDay": 5 },
+    "choices": [
+      { "label": "拿實際照護量說明差異", "effect": { "budget": 4, "quality": 3, "stress": 6 }, "result": "你把每一箱手套換算成照護次數。數字終於有了住民的影子。", "requireAP": 1 },
+      { "label": "承諾全面緊縮耗材", "effect": { "budget": 10, "quality": -8, "morale": -5, "stress": 3 }, "result": "報表好看了一點。現場開始有人把手套用到它自己想退休。" },
+      { "label": "提出分級庫存與每週盤點", "effect": { "budget": 6, "compliance": 5, "stress": 7 }, "result": "主任接受方案，也指定你每週報告。你成功把一場會議變成四場。" }
+    ]
+  },
+  {
+    "id": "meeting_marathon",
+    "title": "跨團隊會議進入第六十分鐘",
+    "subtitle": "議程還在第二項，午餐已經涼了。",
+    "text": "護理、照服、社工、營養與復健都提出合理需求。每個需求單獨看都做得到，放在同一張班表上就開始違反物理。",
+    "tags": ["會議", "人力", "日常"],
+    "type": "daily",
+    "actor": "supervisor_chen",
+    "actorLine": "先決定誰做、哪一天做，不要只寫持續追蹤。",
+    "sound": "paper",
+    "weight": 9,
+    "oneShot": false,
+    "condition": { "minDay": 5 },
+    "choices": [
+      { "label": "逐項指定負責人與期限", "effect": { "quality": 6, "compliance": 5, "morale": -3, "stress": 9 }, "result": "會議終於結束。每個人手上都多一件事，至少沒有一件叫『大家注意』。", "requireAP": 1 },
+      { "label": "先收下所有待辦，自己再分配", "effect": { "quality": 3, "morale": 4, "stress": 13 }, "result": "大家準時離席。你帶著七項待辦和一盒冷便當回護理站。" },
+      { "label": "時間到，未決項目排下次會議", "effect": { "morale": 5, "stress": -2 }, "result": "大家第一次準時離開會議室。三天後，那些未決項目也會準時回來。", "followUp": { "id": "meeting_action_items", "delay": 3 } }
     ]
   },
   {
@@ -329,6 +414,23 @@
     "choices": [
       { "label": "補齊流程並正式處理", "effect": { "compliance": 5, "budget": -10, "stress": 12, "morale": 2 }, "result": "有些流程晚做還是比不做好，只是價格不同。" },
       { "label": "交由行政窗口處理", "effect": { "compliance": 2, "stress": 5 }, "result": "你把資料交出去。下一封信很快又 CC 你。" }
+    ]
+  },
+  {
+    "id": "meeting_action_items",
+    "title": "上次會議的未決項目回來了",
+    "subtitle": "主旨：請更新辦理進度。",
+    "text": "三天前被移到下次的事情一件也沒有蒸發。陳督導把清單重新投到螢幕上，每一列後面都多了一格『預計完成日』。",
+    "tags": ["會議", "督導", "後續"],
+    "type": "followup",
+    "actor": "supervisor_chen",
+    "actorLine": "我們今天只確認進度。對，全部都要確認。",
+    "sound": "paper",
+    "weight": 0,
+    "oneShot": false,
+    "choices": [
+      { "label": "重新排序，先完成高風險項目", "effect": { "quality": 5, "compliance": 5, "stress": 8 }, "result": "不是每一項都完成，但最危險的幾件終於有日期、有人名，也有人真的開始做。", "requireAP": 1 },
+      { "label": "把所有期限再往後排", "effect": { "morale": 2, "compliance": -5, "stress": 3 }, "result": "行事曆多了一排新日期。事情本身保持原樣。" }
     ]
   },
   {

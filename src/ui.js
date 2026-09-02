@@ -55,6 +55,7 @@ export class GameUI {
 
   renderHome(hasSave = false) {
     const unlocked = loadAchievements();
+    const soundOn = this.callbacks.isSoundEnabled?.() !== false;
     this.root.className = "app-shell";
     this.root.innerHTML = `
       <main class="home">
@@ -77,6 +78,7 @@ export class GameUI {
             ${hasSave ? `<button class="primary-btn" id="continueGame">繼續翻昨天那本交班本</button>` : ""}
             <button class="${hasSave ? "secondary-btn" : "primary-btn"}" id="newGame">${hasSave ? "重新開始一個月" : "第一天，先去交班"}</button>
             <button class="secondary-btn" id="showAchievements">成就總覽　${unlocked.length} / ${this.data.achievements.length}</button>
+            <button class="secondary-btn sound-home-btn" id="soundToggleHome" aria-pressed="${soundOn}">聲音：${soundOn ? "開" : "關"}</button>
           </div>
           <p class="disclaimer">本作品為虛構情境，所有人物、事件與機構均非真實。</p>
           <p class="copyright">© 鄭瑞賢 製作・版權所有</p>
@@ -86,6 +88,7 @@ export class GameUI {
     this.root.querySelector("#continueGame")?.addEventListener("click", this.callbacks.onContinue);
     this.root.querySelector("#newGame")?.addEventListener("click", this.callbacks.onNewGame);
     this.root.querySelector("#showAchievements")?.addEventListener("click", () => this.showAchievements());
+    this.root.querySelector("#soundToggleHome")?.addEventListener("click", this.callbacks.onSoundToggle);
   }
 
   renderGame(engine) {
@@ -96,6 +99,7 @@ export class GameUI {
     const meterOrder = ["quality", "morale", "family", "compliance", "budget"];
     const event = engine.currentEvent();
     const staffViews = this.getStaffViews(state);
+    const soundOn = this.callbacks.isSoundEnabled?.() !== false;
 
     this.root.innerHTML = `
       <main class="game">
@@ -120,13 +124,14 @@ export class GameUI {
 
         <div class="game-main">
           <div class="world-layout">
-            ${this.renderScene(state, staffViews)}
+            ${this.renderScene(engine, staffViews, event)}
             <div class="play-column">
               <div class="status-strip">
                 <span class="team-status ${state.staffShortage ? "shortage" : ""}"><i aria-hidden="true"></i>在職 ${activeCount} / ${state.staff.length}${state.staffShortage ? "・人力缺口中" : ""}</span>
                 <nav aria-label="遊戲選單">
                   <button id="staffBtn">名冊</button>
                   <button id="achievementBtn">成就</button>
+                  <button id="soundBtn" class="sound-btn" aria-label="${soundOn ? "關閉聲音" : "開啟聲音"}" aria-pressed="${soundOn}"><span aria-hidden="true">音</span></button>
                   <button id="homeBtn">首頁</button>
                 </nav>
               </div>
@@ -174,21 +179,35 @@ export class GameUI {
     });
   }
 
-  renderScene(state, staffViews) {
+  getEventVisitor(event) {
+    if (!event?.actor) return null;
+    return (this.data.scene?.visitors || []).find(visitor => visitor.id === event.actor) || null;
+  }
+
+  renderScene(engine, staffViews, event) {
+    const state = engine.state;
     const visuals = this.data.staff?.visuals || {};
     const manager = this.data.staff?.manager || { name: "你", role: "護理長", thoughts: {} };
     const mood = managerMood(state.meters.stress);
     const managerThought = manager.thoughts?.[mood] || "先處理眼前這件。";
+    const visitor = this.getEventVisitor(event);
 
     return `
       <section class="sim-scene" aria-label="護理站人物場景">
         <img class="scene-background" src="${esc(visuals.sceneImage || "")}" alt="台灣長照機構護理站，桌上有電腦、交班本、電話、藥車、文件與飲料">
         <div class="scene-shade" aria-hidden="true"></div>
-        <div class="manager-figure manager-${mood}">
-          <div class="manager-thought">${esc(managerThought)}</div>
+        ${(this.data.scene?.hotspots || []).map(hotspot => {
+          const action = engine.getAction(hotspot.actionId);
+          const availability = action ? engine.actionAvailability(action) : { ok: false, reason: "目前無法使用" };
+          return `<button class="scene-hotspot ${availability.ok ? "" : "unavailable"}" data-hotspot="${esc(hotspot.id)}" style="--hotspot-x:${Number(hotspot.x) || 50}%;--hotspot-y:${Number(hotspot.y) || 50}%" aria-label="操作${esc(hotspot.label)}${availability.ok ? "" : `，${esc(availability.reason)}`}">
+            <span aria-hidden="true">${esc(hotspot.glyph || "＋")}</span><em>${esc(hotspot.label)}</em>
+          </button>`;
+        }).join("")}
+        <button class="manager-figure manager-${mood}" data-manager aria-label="查看${esc(manager.role)}狀態">
+          ${visitor ? "" : `<div class="manager-thought">${esc(managerThought)}</div>`}
           <div class="manager-sprite" aria-hidden="true"></div>
           <div class="manager-label"><strong>${esc(manager.name)}</strong><span>${esc(manager.role)}</span></div>
-        </div>
+        </button>
         ${staffViews.map((npc, index) => {
           const moodName = npcMood(npc);
           const x = Number.isFinite(Number(npc.scene?.x)) ? Number(npc.scene.x) : 12 + index * 14;
@@ -201,7 +220,12 @@ export class GameUI {
             <span class="npc-state-dot" aria-hidden="true"></span>
           </button>`;
         }).join("")}
-        <div class="scene-tip">點同仁看看他在想什麼</div>
+        ${visitor ? `<button class="visitor-figure" data-visitor="${esc(visitor.id)}" style="--visitor-x:${Number(visitor.scene?.x) || 84}%;--visitor-y:${Number(visitor.scene?.y) || 45}%;--visitor-scale:${Number(visitor.scene?.scale) || 1};--visitor-sprite-x:${Math.max(0, Math.min(2, Number(visitor.spriteColumn) || 0)) * 50}%" aria-label="${esc(visitor.name)}，${esc(visitor.role)}">
+          <span class="visitor-line">${esc(event.actorLine || visitor.defaultLine)}</span>
+          <span class="visitor-sprite" aria-hidden="true"></span>
+          <span class="visitor-name">${esc(visitor.name)}</span>
+        </button>` : ""}
+        <div class="scene-tip">點人物或發光物件互動</div>
       </section>`;
   }
 
@@ -211,6 +235,10 @@ export class GameUI {
     if (managerSprite && visuals.managerSprite) managerSprite.style.backgroundImage = `url("${visuals.managerSprite}")`;
     this.root.querySelectorAll(".npc-sprite").forEach(sprite => {
       if (visuals.staffSprite) sprite.style.backgroundImage = `url("${visuals.staffSprite}")`;
+    });
+    this.root.querySelectorAll(".visitor-sprite").forEach(sprite => {
+      const visitorSprite = this.data.scene?.visuals?.visitorSprite;
+      if (visitorSprite) sprite.style.backgroundImage = `url("${visitorSprite}")`;
     });
   }
 
@@ -227,6 +255,7 @@ export class GameUI {
     const state = engine.state;
     const burning = state.meters.stress >= 80;
     const fatigue = state.meters.stress >= 50 && state.meters.stress < 80 && state.fortune?.fatigueAside;
+    const visitor = this.getEventVisitor(event);
     return `
       <article class="event-paper event-slip">
         <span class="paper-clip" aria-hidden="true"></span>
@@ -236,6 +265,10 @@ export class GameUI {
           </div>
           <span class="event-count">待處理 ${state.eventQueue.length + 1}</span>
         </div>
+        ${visitor ? `<div class="event-visitor-card">
+          <div class="event-visitor-portrait" style="--visitor-sprite-x:${Math.max(0, Math.min(2, Number(visitor.spriteColumn) || 0)) * 50}%"><span class="visitor-sprite" aria-hidden="true"></span></div>
+          <div><strong>${esc(visitor.name)}</strong><span>${esc(visitor.role)}・${esc(visitor.trait)}</span></div>
+        </div>` : ""}
         <h2>${esc(event.title)}</h2>
         ${event.subtitle ? `<p class="event-subtitle">${esc(event.subtitle)}</p>` : ""}
         <p class="event-text">${esc(event.text)}</p>
@@ -265,7 +298,7 @@ export class GameUI {
           </div>
         </div>
         <div class="action-list">
-          ${this.data.actions.map(action => {
+          ${this.data.actions.filter(action => !action.sceneOnly).map(action => {
             const available = engine.actionAvailability(action);
             const cost = action.ap === "all" ? "全棄" : `${action.ap} AP`;
             return `<button class="action-btn ${action.endDay ? "go-home" : ""}" data-action="${esc(action.id)}" ${available.ok ? "" : "disabled"}>
@@ -288,10 +321,104 @@ export class GameUI {
     this.root.querySelector("#settleDay")?.addEventListener("click", this.callbacks.onSettle);
     this.root.querySelector("#staffBtn")?.addEventListener("click", () => this.showStaff(engine.state));
     this.root.querySelector("#achievementBtn")?.addEventListener("click", () => this.showAchievements());
+    this.root.querySelector("#soundBtn")?.addEventListener("click", this.callbacks.onSoundToggle);
     this.root.querySelector("#homeBtn")?.addEventListener("click", this.callbacks.onHome);
     this.root.querySelectorAll("[data-npc]").forEach(button => {
       button.addEventListener("click", () => this.showNpc(engine.state, button.dataset.npc));
     });
+    this.root.querySelector("[data-manager]")?.addEventListener("click", () => this.showManager(engine.state));
+    this.root.querySelectorAll("[data-hotspot]").forEach(button => {
+      button.addEventListener("click", () => this.showSceneAction(engine, button.dataset.hotspot));
+    });
+    this.root.querySelectorAll("[data-visitor]").forEach(button => {
+      button.addEventListener("click", () => this.showVisitor(engine.currentEvent(), button.dataset.visitor));
+    });
+  }
+
+  showManager(state) {
+    const returnFocus = document.activeElement;
+    const manager = this.data.staff?.manager || { name: "你", role: "護理長", thoughts: {} };
+    const mood = managerMood(state.meters.stress);
+    const moodLabels = { happy: "精神還行", normal: "表面正常", tired: "明顯疲累", burning: "燃燒中" };
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `<section class="overlay-paper manager-paper" role="dialog" aria-modal="true" aria-labelledby="managerTitle" tabindex="-1">
+      <div class="manager-card-head">
+        <div class="manager-card-sprite manager-${mood}"><span class="manager-sprite" aria-hidden="true"></span></div>
+        <div><div class="eyebrow">${esc(manager.role)}本人</div><h2 id="managerTitle">${esc(manager.name)}</h2><strong>${esc(moodLabels[mood])}</strong></div>
+      </div>
+      <blockquote class="npc-thought-line">「${esc(manager.thoughts?.[mood] || "先處理眼前這件。") }」</blockquote>
+      <div class="npc-detail-row"><span>壓力</span><div class="npc-detail-track stress"><i style="width:${state.meters.stress}%"></i></div><strong>${state.meters.stress}</strong></div>
+      <p class="manager-hint">點護理站裡發光的物件，可以直接把 AP 花在現場工作上。</p>
+      <button class="secondary-btn" id="closeManager">回到護理站</button>
+    </section>`;
+    document.body.appendChild(overlay);
+    const sprite = overlay.querySelector(".manager-sprite");
+    if (sprite && this.data.staff?.visuals?.managerSprite) sprite.style.backgroundImage = `url("${this.data.staff.visuals.managerSprite}")`;
+    this.bindClosableOverlay(overlay, "#closeManager", returnFocus);
+  }
+
+  showSceneAction(engine, hotspotId) {
+    const returnFocus = document.activeElement;
+    const hotspot = (this.data.scene?.hotspots || []).find(item => item.id === hotspotId);
+    const action = hotspot ? engine.getAction(hotspot.actionId) : null;
+    if (!hotspot || !action) return;
+    const availability = engine.actionAvailability(action);
+    const deltas = formatDelta(action.effect);
+    const cost = action.ap === "all" ? "剩餘全部 AP" : `${action.ap} AP`;
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `<section class="overlay-paper scene-action-paper" role="dialog" aria-modal="true" aria-labelledby="sceneActionTitle" tabindex="-1">
+      <div class="scene-action-head"><span aria-hidden="true">${esc(hotspot.glyph || "＋")}</span><div><div class="eyebrow">護理站互動</div><h2 id="sceneActionTitle">${esc(hotspot.label)}</h2></div></div>
+      <p>${esc(hotspot.description)}</p>
+      <div class="scene-action-name"><strong>${esc(action.name)}</strong><span>消耗 ${cost}</span></div>
+      <div class="delta-line">${deltas.map(item => `<span class="delta-chip ${item.value > 0 ? "pos" : "neg"}">${esc(item.label)} ${item.value > 0 ? "+" : ""}${item.value}</span>`).join("")}</div>
+      ${availability.ok ? "" : `<p class="scene-action-reason">${esc(availability.reason)}</p>`}
+      <div class="dialog-actions"><button class="primary-btn" id="doSceneAction" ${availability.ok ? "" : "disabled"}>執行現場工作</button><button class="secondary-btn" id="cancelSceneAction">先不要</button></div>
+    </section>`;
+    document.body.appendChild(overlay);
+    const close = () => {
+      overlay.remove();
+      returnFocus?.focus?.({ preventScroll: true });
+    };
+    overlay.querySelector("#cancelSceneAction").addEventListener("click", close);
+    overlay.addEventListener("click", event => { if (event.target === overlay) close(); });
+    overlay.addEventListener("keydown", event => { if (event.key === "Escape") close(); });
+    overlay.querySelector("#doSceneAction")?.addEventListener("click", () => {
+      overlay.remove();
+      this.callbacks.onSceneAction(action.id, hotspot.sound);
+    });
+    overlay.querySelector(".scene-action-paper").focus({ preventScroll: true });
+  }
+
+  showVisitor(event, visitorId) {
+    const returnFocus = document.activeElement;
+    const visitor = (this.data.scene?.visitors || []).find(item => item.id === visitorId);
+    if (!visitor) return;
+    const column = Math.max(0, Math.min(2, Number(visitor.spriteColumn) || 0));
+    const overlay = document.createElement("div");
+    overlay.className = "overlay";
+    overlay.innerHTML = `<section class="overlay-paper visitor-paper" role="dialog" aria-modal="true" aria-labelledby="visitorTitle" tabindex="-1">
+      <div class="visitor-card-head"><div class="visitor-card-sprite" style="--visitor-sprite-x:${column * 50}%"><span class="visitor-sprite" aria-hidden="true"></span></div><div><div class="eyebrow">${esc(visitor.role)}</div><h2 id="visitorTitle">${esc(visitor.name)}</h2><strong>${esc(visitor.trait)}</strong></div></div>
+      <p>${esc(visitor.description)}</p>
+      <blockquote class="npc-thought-line">「${esc(event?.actorLine || visitor.defaultLine)}」</blockquote>
+      <button class="secondary-btn" id="closeVisitor">繼續應付</button>
+    </section>`;
+    document.body.appendChild(overlay);
+    const sprite = overlay.querySelector(".visitor-sprite");
+    if (sprite && this.data.scene?.visuals?.visitorSprite) sprite.style.backgroundImage = `url("${this.data.scene.visuals.visitorSprite}")`;
+    this.bindClosableOverlay(overlay, "#closeVisitor", returnFocus);
+  }
+
+  bindClosableOverlay(overlay, closeSelector, returnFocus) {
+    const close = () => {
+      overlay.remove();
+      returnFocus?.focus?.({ preventScroll: true });
+    };
+    overlay.querySelector(closeSelector).addEventListener("click", close);
+    overlay.addEventListener("click", event => { if (event.target === overlay) close(); });
+    overlay.addEventListener("keydown", event => { if (event.key === "Escape") close(); });
+    overlay.querySelector(".overlay-paper").focus({ preventScroll: true });
   }
 
   showNpc(state, npcId) {

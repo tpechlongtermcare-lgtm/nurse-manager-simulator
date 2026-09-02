@@ -25,6 +25,7 @@ const { createInitialState, loadAchievements, loadSave } = await import("../src/
 const { drawDailyEvents, weightedDraw } = await import("../src/deck.js");
 const { markPendingQuits, processMorningQuits } = await import("../src/staff.js");
 const { managerMood, npcMood } = await import("../src/ui.js");
+const { GameAudio } = await import("../src/audio.js");
 
 async function readJSON(relativePath) {
   return JSON.parse(await readFile(new URL(relativePath, import.meta.url), "utf8"));
@@ -34,6 +35,7 @@ const data = {
   events: await readJSON("../data/events.json"),
   actions: await readJSON("../data/actions.json"),
   staff: await readJSON("../data/staff.json"),
+  scene: await readJSON("../data/scene.json"),
   fortunes: await readJSON("../data/fortune.json"),
   achievements: await readJSON("../data/achievements.json"),
   endings: await readJSON("../data/endings.json")
@@ -136,6 +138,7 @@ test("data files have valid references and supported fields", () => {
   const staffIds = new Set(data.staff.staff.map(item => item.id));
   const roles = new Set(data.staff.staff.map(item => item.role));
   const actionIds = new Set(data.actions.map(item => item.id));
+  const visitorIds = new Set(data.scene.visitors.map(item => item.id));
 
   assert(data.staff.staff.length === 6, `預期 6 位 NPC，實際 ${data.staff.staff.length}`);
   assert(data.staff.manager?.name && data.staff.manager?.role, "護理長顯示資料不完整");
@@ -147,6 +150,13 @@ test("data files have valid references and supported fields", () => {
     assert(existsSync(new URL(`../${assetPath.slice(2)}`, import.meta.url)), `${key} 素材不存在：${assetPath}`);
   }
   assert(Object.keys(data.staff.visuals || {}).length === 3, "場景、護理長與同仁素材路徑必須齊全");
+  assert(existsSync(new URL(`../${data.scene.visuals.visitorSprite.slice(2)}`, import.meta.url)), "訪客人物素材不存在");
+  assert(data.scene.visitors.length === 3, "應有主任、督導與衛生局稽查員三位訪客");
+  assert(data.scene.hotspots.length >= 6, "護理站至少需要六個可互動物件");
+  for (const hotspot of data.scene.hotspots) {
+    assert(actionIds.has(hotspot.actionId), `${hotspot.id} 指向不存在的行動 ${hotspot.actionId}`);
+    assert(Number.isFinite(hotspot.x) && Number.isFinite(hotspot.y), `${hotspot.id} 缺少場景座標`);
+  }
 
   const spriteRows = new Set();
   for (const npc of data.staff.staff) {
@@ -161,12 +171,16 @@ test("data files have valid references and supported fields", () => {
   }
   assert(spriteRows.size === data.staff.staff.length, "NPC spriteRow 不可重複");
 
-  assert(data.events.length === 22, `預期 22 張事件，實際 ${data.events.length}`);
+  assert(data.events.length >= 27, `預期至少 27 張事件，實際 ${data.events.length}`);
+  for (const requiredId of ["director_rounding", "supervisor_record_review", "director_budget_meeting", "meeting_marathon", "audit_visit"]) {
+    assert(data.events.some(event => event.id === requiredId), `缺少擬真管理事件 ${requiredId}`);
+  }
   for (const event of data.events) {
     assert(event.id && !eventIds.has(event.id), `事件 id 重複或空白：${event.id}`);
     eventIds.add(event.id);
     assert(["daily", "crisis", "followup"].includes(event.type), `${event.id} type 不支援`);
     assert(event.title && event.text, `${event.id} 缺標題或內文`);
+    if (event.actor) assert(visitorIds.has(event.actor), `${event.id} 指向不存在訪客 ${event.actor}`);
     assert(Array.isArray(event.choices) && event.choices.length >= 2, `${event.id} 至少需要兩個選項`);
     for (const choice of event.choices) {
       assert(choice.label && choice.result, `${event.id} 有選項缺 label/result`);
@@ -198,6 +212,15 @@ test("data files have valid references and supported fields", () => {
   for (const fortune of data.fortunes) {
     if (fortune.modifier?.action) assert(actionIds.has(fortune.modifier.action), `運勢指向不存在行動 ${fortune.modifier.action}`);
   }
+});
+
+test("sound preference toggles and persists without requiring audio support", () => {
+  const audio = new GameAudio();
+  assert(audio.isEnabled(), "音效預設應開啟");
+  assert(audio.toggle() === false, "第一次切換應關閉音效");
+  assert(localStorage.getItem("nurseSim.sound.v1") === "off", "關閉音效設定未保存");
+  assert(audio.toggle() === true, "第二次切換應開啟音效");
+  assert(localStorage.getItem("nurseSim.sound.v1") === "on", "開啟音效設定未保存");
 });
 
 test("manager and NPC visual moods follow meter thresholds", () => {
