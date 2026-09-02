@@ -1,0 +1,14 @@
+[
+  { "id": "iron_nurse", "name": "鐵打的護理長", "desc": "連續 7 天未執行準時下班。", "condition": { "path": "stats.noGoHomeStreak", "op": ">=", "value": 7 } },
+  { "id": "budget_killer", "name": "預算殺手", "desc": "單局訂飲料至少 10 次。", "condition": { "path": "stats.drinkCount", "op": ">=", "value": 10 } },
+  { "id": "paper_master", "name": "文件之神", "desc": "法規遵循達到 95。", "condition": { "path": "meters.compliance", "op": ">=", "value": 95 } },
+  { "id": "who_are_you", "name": "你哪位", "desc": "整局未執行陪住民聊天。", "when": "gameEnd", "condition": { "path": "stats.chatCount", "op": "=", "value": 0 } },
+  { "id": "empty_nest", "name": "人去樓空", "desc": "一局內走掉 3 位以上同仁。", "condition": { "path": "stats.quitCount", "op": ">=", "value": 3 } },
+  { "id": "firefighter", "name": "專業滅火", "desc": "一天內處理 2 張 crisis 卡。", "condition": { "path": "stats.crisisHandledToday", "op": ">=", "value": 2 } },
+  { "id": "procrastinator", "name": "明天再說", "desc": "同一局累積埋下至少 5 顆延遲炸彈。", "condition": { "path": "stats.bombsPlanted", "op": ">=", "value": 5 } },
+  { "id": "still_here", "name": "我還在", "desc": "活到第 30 天，而且壓力低於 40。", "when": "gameEnd", "all": [ { "path": "day", "op": ">=", "value": 30 }, { "path": "meters.stress", "op": "<", "value": 40 } ] },
+  { "id": "one_thousand_nine", "name": "1999 響了", "desc": "家屬滿意度曾掉到 30 以下。", "condition": { "path": "stats.minFamily", "op": "<", "value": 30 } },
+  { "id": "perfect_paper", "name": "紙上優等", "desc": "評鑑至少 90 分，但士氣低於 30。", "when": "gameEnd", "all": [ { "path": "evaluationScore", "op": ">=", "value": 90 }, { "path": "meters.morale", "op": "<", "value": 30 } ] },
+  { "id": "human", "name": "還是個人", "desc": "單局陪住民聊天至少 10 次。", "condition": { "path": "stats.chatCount", "op": ">=", "value": 10 } },
+  { "id": "all_ap_spent", "name": "榨乾自己", "desc": "連續 10 天把 AP 用到一滴不剩。", "condition": { "path": "stats.allAPSpentStreak", "op": ">=", "value": 10 } }
+]

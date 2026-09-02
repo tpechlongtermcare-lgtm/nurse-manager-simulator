@@ -1,0 +1,349 @@
+[
+  {
+    "id": "staff_sick_01",
+    "title": "早上七點的那則訊息",
+    "subtitle": "「護理長我今天有點不舒服……😭😭😭」",
+    "text": "{{npc:照服員}}傳來訊息。你看了一眼今天的班表，早班原本就已經薄得可以透光。",
+    "tags": ["人力", "日常"],
+    "type": "daily",
+    "weight": 12,
+    "oneShot": false,
+    "condition": { "minDay": 2, "morale": "<75", "hasNpcRole": "照服員" },
+    "choices": [
+      {
+        "label": "我自己下去頂",
+        "effect": { "quality": 3, "morale": 5, "stress": 15 },
+        "result": "你換上工作服。九點以後就沒有人記得你今天原本要開會。"
+      },
+      {
+        "label": "call 別人加班",
+        "effect": { "morale": -8, "budget": -6 },
+        "result": "電話那頭說『好啦』。那個『啦』有點長。",
+        "npcEffect": { "role": "照服員", "loyalty": -6, "stamina": -10 }
+      },
+      {
+        "label": "今天降人力硬撐",
+        "effect": { "quality": -8, "stress": 4 },
+        "result": "今天平安過了。今天。",
+        "followUp": { "id": "fall_after_shortstaff", "delay": 3 }
+      }
+    ]
+  },
+  {
+    "id": "washer_broken",
+    "title": "洗衣機發出最後一聲",
+    "subtitle": "「它剛剛好像有冒煙。」",
+    "text": "洗衣機停在一個很有尊嚴的位置，完全不動。髒衣桶沒有因此停止增加。",
+    "tags": ["設備", "日常"],
+    "type": "daily",
+    "weight": 9,
+    "oneShot": true,
+    "choices": [
+      { "label": "今天就叫修", "effect": { "budget": -12, "quality": 6, "morale": 4 }, "result": "師傅說下午到。你第一次覺得『下午到』像一句情話。" },
+      { "label": "直接買新的", "effect": { "budget": -22, "quality": 10, "morale": 7, "stress": -2 }, "result": "預算表哭了，但洗衣間安靜了。" },
+      { "label": "先手洗撐一下", "effect": { "budget": -2, "morale": -10, "stress": 5 }, "result": "阿珠姐沒有說話。她只是把橡膠手套戴得特別大聲。", "npcEffect": { "role": "照服員", "stamina": -8, "loyalty": -4 } }
+    ]
+  },
+  {
+    "id": "boss_report",
+    "title": "一份「簡單的」報表",
+    "subtitle": "「護理長，今天下班前給我就好。」",
+    "text": "長官要一份近三個月的人力、品質、家屬滿意與教育訓練彙整。附件有六個 Excel，檔名都叫 final。",
+    "tags": ["長官", "法規", "日常"],
+    "type": "daily",
+    "weight": 11,
+    "oneShot": false,
+    "choices": [
+      { "label": "我自己熬夜做", "effect": { "compliance": 8, "stress": 14 }, "result": "23:48，你寄出了。00:03，對方回：『收到，明天再麻煩補一欄。』" },
+      { "label": "先交能看的版本", "effect": { "compliance": -3, "stress": 3 }, "result": "沒有被退件。這件事比你預期更值得慶祝。" },
+      { "label": "交給麗雪", "condition": { "hasNpcId": "npc_lixue" }, "effect": { "compliance": 6, "stress": -2 }, "result": "麗雪打不開樞紐分析，但兩小時後交出一份語氣無懈可擊的正式公文。", "npcEffect": { "npcId": "npc_lixue", "stamina": -8, "loyalty": 2 } }
+    ]
+  },
+  {
+    "id": "family_food",
+    "title": "家屬帶了一袋滷味",
+    "subtitle": "「阿嬤以前最愛吃這個。」",
+    "text": "家屬提著香得整個護理站都知道的滷味進來。住民有吞嚥風險，但家屬眼神非常有愛。",
+    "tags": ["家屬", "住民", "日常"],
+    "type": "daily",
+    "weight": 10,
+    "oneShot": false,
+    "choices": [
+      { "label": "婉拒，照規定來", "effect": { "quality": 6, "family": -8, "compliance": 4 }, "result": "你講了十分鐘。家屬最後說：『所以就是不能吃嘛。』" },
+      { "label": "今天默許一下", "effect": { "family": 8, "quality": -8, "stress": 2 }, "result": "阿嬤很開心。你全程站在旁邊，比阿嬤還用力吞口水。", "followUp": { "id": "complaint_1999", "delay": 14 } },
+      { "label": "請廚房協助調整質地", "effect": { "family": 7, "quality": 6, "budget": -4, "stress": 3 }, "result": "味道少了一點，安全多了一點。家屬拍照傳到家庭群組。" }
+    ]
+  },
+  {
+    "id": "new_admission",
+    "title": "候床名單又往前了一格",
+    "subtitle": "「家屬說今天就可以入住。」",
+    "text": "一位新住民條件大致符合，但資訊還有幾個空白。床位空著一天，就像預算表上有一個洞。",
+    "tags": ["住民", "人力", "日常"],
+    "type": "daily",
+    "weight": 9,
+    "oneShot": false,
+    "choices": [
+      { "label": "先收，資料再補", "effect": { "budget": 8, "quality": -5, "compliance": -8, "stress": 5 }, "result": "床滿了。你的待辦也滿了。" },
+      { "label": "今天不收", "effect": { "budget": -5, "quality": 4, "family": -3 }, "result": "家屬說了解。電話掛掉前的沉默大約三秒。" },
+      { "label": "先做完整評估", "effect": { "quality": 6, "compliance": 6, "stress": 4 }, "result": "你多花了一個下午，少留了一個晚上睡不著的理由。", "requireAP": 1 }
+    ]
+  },
+  {
+    "id": "wifi_down",
+    "title": "網路斷了",
+    "subtitle": "「系統一直轉圈圈。」",
+    "text": "所有紀錄都卡在登入畫面。大家開始用一種久違的眼神看著紙和筆。",
+    "tags": ["設備", "隱藏", "日常"],
+    "type": "daily",
+    "weight": 8,
+    "oneShot": false,
+    "choices": [
+      { "label": "先全部手寫", "effect": { "compliance": 5, "morale": -5, "stress": 5 }, "result": "紙本備援流程終於證明自己不是為了評鑑才存在。" },
+      { "label": "等網路自己好", "effect": { "compliance": -8, "stress": 2 }, "result": "下午三點恢復。下午三點零一分，所有人開始補紀錄。" },
+      { "label": "我自己修看看", "effect": { "stress": 7, "budget": 2 }, "result": "你重開路由器。它好了。你開始懷疑自己的職稱。" }
+    ]
+  },
+  {
+    "id": "student_intern",
+    "title": "實習生來了",
+    "subtitle": "「老師說今天跟護理長學習管理。」",
+    "text": "三雙充滿期待的眼睛看著你。你今天的行程包含排班、抱怨、催貨和找一支不見的血壓計。",
+    "tags": ["人力", "日常"],
+    "type": "daily",
+    "weight": 8,
+    "oneShot": false,
+    "choices": [
+      { "label": "認真帶一整天", "effect": { "quality": 5, "morale": 3, "stress": 8 }, "result": "學生最後說：『老師，我以前以為護理長都在辦公室。』你笑了一下。" },
+      { "label": "交給阿珠姐", "condition": { "hasNpcId": "npc_azhu" }, "effect": { "quality": 3, "stress": -2 }, "result": "兩小時後，學生的移位技巧進步了，表情也成熟了很多。", "npcEffect": { "npcId": "npc_azhu", "stamina": -7, "loyalty": -2 } },
+      { "label": "讓他們自由探索", "effect": { "quality": -4, "stress": -1 }, "result": "下午你在儲藏室找到他們。至少他們學會了庫存放哪裡。" }
+    ]
+  },
+  {
+    "id": "resident_birthday",
+    "title": "今天是阿嬤生日",
+    "subtitle": "「她從早上就在問蛋糕。」",
+    "text": "住民的女兒昨天提醒過。你也記得。只是今天同時有九件事記得你。",
+    "tags": ["住民", "隱藏", "日常"],
+    "type": "daily",
+    "weight": 8,
+    "oneShot": true,
+    "choices": [
+      { "label": "辦個小慶生會", "effect": { "family": 10, "morale": 7, "stress": -4, "budget": -5 }, "result": "阿嬤吹了三次才把蠟燭吹熄。沒有人催她。" },
+      { "label": "訂蛋糕就好", "effect": { "family": 6, "budget": -3 }, "result": "大家唱完生日快樂歌，五分鐘後護理站又恢復原本的速度。" },
+      { "label": "真的忙到忘記", "effect": { "family": -10, "stress": 4 }, "result": "晚上你看到桌上那張沒拆的生日卡。今天沒有補考。", "followUp": { "id": "complaint_1999", "delay": 14 } }
+    ]
+  },
+  {
+    "id": "staff_conflict",
+    "title": "休息室的門關得很大聲",
+    "subtitle": "「我不是針對她，我只是受不了她。」",
+    "text": "兩位照服員為了誰沒補尿布吵起來。現在整個班都知道尿布在哪裡，也知道彼此的缺點。",
+    "tags": ["人力", "日常"],
+    "type": "daily",
+    "weight": 11,
+    "oneShot": false,
+    "condition": { "hasNpcRole": "照服員" },
+    "choices": [
+      { "label": "兩邊都留下來談", "effect": { "morale": 4, "stress": 7 }, "result": "四十分鐘後，沒有人道歉，但至少音量回到室內標準。", "npcEffect": { "role": "照服員", "loyalty": 2 } },
+      { "label": "先站工作比較穩的那邊", "effect": { "quality": 3, "morale": -9, "stress": 2 }, "result": "問題今天解決了。另一個問題開始計時。", "followUp": { "id": "complaint_1999", "delay": 14 } },
+      { "label": "裝作沒聽到", "effect": { "morale": -7, "stress": -2 }, "result": "下午很安靜。那種不太好的安靜。", "followUp": { "id": "complaint_1999", "delay": 14 } }
+    ]
+  },
+  {
+    "id": "supply_short",
+    "title": "尿布剩最後兩包",
+    "subtitle": "「昨天不是還很多嗎？」",
+    "text": "庫存數字和現場實際數量開始分居。你看著兩包尿布，感受到物資管理的哲學重量。",
+    "tags": ["設備", "隱藏", "日常"],
+    "type": "daily",
+    "weight": 9,
+    "oneShot": false,
+    "choices": [
+      { "label": "緊急叫貨", "effect": { "budget": -9, "quality": 5, "stress": 2 }, "result": "廠商說最快下午。你問『最快三點嗎？』他說『最快下午。』" },
+      { "label": "先用替代品", "effect": { "budget": -2, "quality": -6, "morale": -3 }, "result": "尺寸勉強可以。大家開始用經驗補產品規格。" },
+      { "label": "跟隔壁單位借", "effect": { "budget": -1, "morale": 2, "stress": 1 }, "result": "你抱回兩箱。人情債沒有列在庫存系統裡。" }
+    ]
+  },
+  {
+    "id": "fall_night",
+    "title": "凌晨兩點零七分的電話",
+    "subtitle": "「護理長，阿嬤跌倒了。」",
+    "text": "住民夜間自行下床時跌倒，目前意識清楚。夜班正在等你說下一步。",
+    "tags": ["住民", "危機"],
+    "type": "crisis",
+    "weight": 10,
+    "oneShot": false,
+    "condition": { "minDay": 8 },
+    "choices": [
+      { "label": "立刻通報、評估、聯絡家屬", "effect": { "quality": 7, "compliance": 7, "family": 3, "stress": 10 }, "result": "天亮以前你處理完所有該處理的事。天亮以後，今天才正式開始。" },
+      { "label": "生命徵象穩定，先觀察", "effect": { "quality": -7, "compliance": -8, "stress": 3 }, "result": "目前看起來沒事。『目前』是一個很重的詞。", "followUp": { "id": "complaint_1999", "delay": 14 } },
+      { "label": "請夜班先把紀錄補完整", "effect": { "compliance": 5, "morale": -8, "stress": 5 }, "result": "紀錄完整了。夜班的表情也很完整。", "npcEffect": { "role": "護理師", "loyalty": -4, "stamina": -8 } }
+    ]
+  },
+  {
+    "id": "scabies",
+    "title": "這個紅疹看起來不太單純",
+    "subtitle": "「隔壁床好像也在抓。」",
+    "text": "兩位住民出現夜間搔癢與紅疹。你腦中立刻浮出一整排隔離衣。",
+    "tags": ["感控", "危機"],
+    "type": "crisis",
+    "weight": 8,
+    "oneShot": true,
+    "condition": { "minDay": 8 },
+    "choices": [
+      { "label": "提高層級，全區防治", "effect": { "quality": 10, "compliance": 8, "budget": -12, "morale": -6, "stress": 10 }, "result": "所有人穿上防護裝備。護理站瞬間有一種熟悉的不祥感。" },
+      { "label": "先單人隔離觀察", "effect": { "quality": 3, "compliance": 2, "budget": -4, "stress": 5 }, "result": "你把接觸史畫成一張圖。圖越畫越像蜘蛛網。" },
+      { "label": "先送皮膚科確認再說", "effect": { "family": 2, "quality": -5, "stress": 2 }, "result": "你決定先確認。五天很快就會告訴你這個決定值多少。", "followUp": { "id": "scabies_spread", "delay": 5 } }
+    ]
+  },
+  {
+    "id": "audit_visit",
+    "title": "衛生局明天來",
+    "subtitle": "「臨時關懷訪視，不用特別準備。」",
+    "text": "訊息下午四點二十七分進來。你看了一眼文件櫃，文件櫃也看著你。",
+    "tags": ["法規", "長官", "危機"],
+    "type": "crisis",
+    "weight": 9,
+    "oneShot": true,
+    "condition": { "minDay": 8 },
+    "choices": [
+      { "label": "今晚全部補完", "effect": { "compliance": 14, "stress": 18, "morale": -3 }, "result": "凌晨一點，你發現 3 月份有一格沒簽名。你居然笑了。" },
+      { "label": "照常上班，缺什麼就承認", "effect": { "compliance": -7, "stress": -1 }, "result": "你選擇相信平常。七天後會知道平常相不相信你。", "followUp": { "id": "audit_deficiency", "delay": 7 } },
+      { "label": "請大家一起留下來", "effect": { "compliance": 10, "morale": -10, "budget": -8, "stress": 9 }, "result": "大家都留下來了。沒有人問晚餐吃什麼。", "npcEffect": { "role": "照服員", "stamina": -10, "loyalty": -4 } }
+    ]
+  },
+  {
+    "id": "senior_quit",
+    "title": "阿珠姐把一個信封放桌上",
+    "subtitle": "「護理長，我做到月底。」",
+    "text": "二十年資歷的阿珠姐遞出辭呈。她說不是誰的問題，只是累了。通常這句話代表很多人的問題。",
+    "tags": ["人力", "危機"],
+    "type": "crisis",
+    "weight": 7,
+    "oneShot": true,
+    "condition": { "minDay": 8, "hasNpcId": "npc_azhu" },
+    "choices": [
+      { "label": "坐下來好好慰留", "effect": { "morale": 5, "stress": 8 }, "result": "你沒有先講機構需要她。你先問她最近怎麼了。她沉默很久。", "npcEffect": { "npcId": "npc_azhu", "loyalty": 15 } },
+      { "label": "想辦法調整待遇", "effect": { "budget": -14, "morale": 8, "stress": 5 }, "result": "錢沒有解決全部問題，但至少證明你不是只會說辛苦了。", "npcEffect": { "npcId": "npc_azhu", "loyalty": 20 } },
+      { "label": "尊重她的決定", "effect": { "morale": -5, "stress": 3 }, "result": "阿珠姐說謝謝。這次那個謝謝很短。", "npcEffect": { "npcId": "npc_azhu", "loyalty": -100 } }
+    ]
+  },
+  {
+    "id": "tube_dispute",
+    "title": "家屬說要放，住民一直搖頭",
+    "subtitle": "「不放怎麼會有營養？」",
+    "text": "進食狀況持續下降。家屬希望放置鼻胃管，住民在溝通時反覆表示不要。護理站突然變得很安靜。",
+    "tags": ["家屬", "住民", "危機"],
+    "type": "crisis",
+    "weight": 7,
+    "oneShot": true,
+    "condition": { "minDay": 8 },
+    "choices": [
+      { "label": "安排 ACP／共同決策會談", "effect": { "quality": 8, "family": 3, "compliance": 6, "stress": 8 }, "result": "一小時後，沒有人得到簡單答案。但至少每個人的聲音都在桌上。", "requireAP": 1 },
+      { "label": "先照家屬意思處理", "effect": { "family": 5, "quality": -10, "stress": 5 }, "result": "事情變得比較快。你的心沒有。" },
+      { "label": "請倫理／跨團隊一起進來", "effect": { "quality": 7, "compliance": 7, "stress": 6 }, "result": "會議多了一場。責任少了一點孤單。", "requireAP": 1 }
+    ]
+  },
+  {
+    "id": "staff_injury",
+    "title": "移位到一半，他的腰先不行了",
+    "subtitle": "「護理長，我應該只是拉到。」",
+    "text": "照服員協助住民移位時扭傷腰部。本人一直說沒關係，臉色則持不同意見。",
+    "tags": ["人力", "法規", "危機"],
+    "type": "crisis",
+    "weight": 8,
+    "oneShot": false,
+    "condition": { "minDay": 8, "hasNpcRole": "照服員" },
+    "choices": [
+      { "label": "照流程通報職災", "effect": { "compliance": 8, "morale": 5, "budget": -5, "stress": 6 }, "result": "表單很多，但至少他知道受傷不是一種個人失敗。", "npcEffect": { "role": "照服員", "stamina": -12, "loyalty": 4 } },
+      { "label": "先私下處理就好", "effect": { "compliance": -10, "stress": 2 }, "result": "今天少了一張表。十天後可能多很多張。", "followUp": { "id": "injury_claim", "delay": 10 }, "npcEffect": { "role": "照服員", "stamina": -14, "loyalty": -8 } },
+      { "label": "叫他今天休息，明天再看", "effect": { "morale": 2, "quality": -3, "stress": 1 }, "result": "他說好。你們兩個都希望睡一覺真的有那麼萬能。", "followUp": { "id": "injury_claim", "delay": 10 }, "npcEffect": { "role": "照服員", "stamina": -18, "loyalty": -4 } }
+    ]
+  },
+  {
+    "id": "fall_after_shortstaff",
+    "title": "你差點忘了那個缺人的早班",
+    "subtitle": "三天前，你們決定先撐過去。",
+    "text": "那天的照護紀錄被重新翻出來。一位住民在忙亂時段自行下床跌倒，現在家屬正在問當時現場到底有幾個人。",
+    "tags": ["住民", "人力", "後續"],
+    "type": "followup",
+    "weight": 0,
+    "oneShot": true,
+    "choices": [
+      { "label": "完整說明並啟動檢討", "effect": { "family": -4, "quality": 5, "compliance": 5, "stress": 9 }, "result": "你把那天的人力寫進會議紀錄。紙終於記得你們當時有多忙。" },
+      { "label": "先安撫家屬就好", "effect": { "family": 2, "compliance": -6, "stress": 4 }, "result": "電話掛掉了。問題沒有。", "followUp": { "id": "complaint_1999", "delay": 14 } }
+    ]
+  },
+  {
+    "id": "complaint_1999",
+    "title": "上個月那件事——1999 真的響了",
+    "subtitle": "「市府這邊收到民眾陳情。」",
+    "text": "你以為事情已經過去。它只是繞了一圈，換了一個電話號碼回來。",
+    "tags": ["家屬", "法規", "後續"],
+    "type": "followup",
+    "weight": 0,
+    "oneShot": false,
+    "choices": [
+      { "label": "把資料全部整理清楚回覆", "effect": { "family": -2, "compliance": 6, "stress": 10 }, "result": "你寄出回覆。系統顯示案件狀態：處理中。人生也是。" },
+      { "label": "先打電話跟家屬談", "effect": { "family": 4, "stress": 8 }, "result": "家屬說他不是要找麻煩，只是希望有人聽。你突然覺得這句話很耳熟。" }
+    ]
+  },
+  {
+    "id": "scabies_spread",
+    "title": "五天後，紅疹沒有自己消失",
+    "subtitle": "你現在有七個人在抓。",
+    "text": "皮膚科結果回來，疑似疥瘡擴散。你看著接觸名單，想起五天前那個『先確認看看』。",
+    "tags": ["感控", "後續"],
+    "type": "followup",
+    "weight": 0,
+    "oneShot": true,
+    "choices": [
+      { "label": "全面防治，現在開始", "effect": { "quality": 5, "compliance": 4, "budget": -18, "morale": -8, "stress": 15 }, "result": "所有人開始換床單、洗衣、治療、追接觸史。『先看看』開始收利息。" },
+      { "label": "分區處理", "effect": { "quality": -4, "budget": -9, "stress": 9 }, "result": "你把機構畫成三個區。病毒和寄生蟲通常不看你的平面圖。" }
+    ]
+  },
+  {
+    "id": "audit_deficiency",
+    "title": "七天後，那張缺的文件回來了",
+    "subtitle": "「請於限期內完成改善。」",
+    "text": "臨時查核的缺失通知寄到。內容沒有意外，只有期限。你開始回想上週那句『照常就好』。",
+    "tags": ["法規", "後續"],
+    "type": "followup",
+    "weight": 0,
+    "oneShot": true,
+    "choices": [
+      { "label": "立即補正並做改善計畫", "effect": { "compliance": 10, "stress": 11 }, "result": "你把改善措施寫得很完整。甚至有一瞬間相信未來真的會照表執行。" },
+      { "label": "先補最明顯的", "effect": { "compliance": 3, "stress": 4 }, "result": "紅字少了一半。剩下那一半看起來更紅。" }
+    ]
+  },
+  {
+    "id": "injury_claim",
+    "title": "十天後，那個腰傷回來了",
+    "subtitle": "「醫師說要休一段時間。」",
+    "text": "受傷同仁提出後續醫療與職災相關文件。你重新打開當天紀錄，發現當時寫下的『先休息看看』只有六個字。",
+    "tags": ["人力", "法規", "後續"],
+    "type": "followup",
+    "weight": 0,
+    "oneShot": false,
+    "choices": [
+      { "label": "補齊流程並正式處理", "effect": { "compliance": 5, "budget": -10, "stress": 12, "morale": 2 }, "result": "有些流程晚做還是比不做好，只是價格不同。" },
+      { "label": "交由行政窗口處理", "effect": { "compliance": 2, "stress": 5 }, "result": "你把資料交出去。下一封信很快又 CC 你。" }
+    ]
+  },
+  {
+    "id": "quit_chain",
+    "title": "四天後，班表開始出現空洞",
+    "subtitle": "「護理長，我也想跟你談一下。」",
+    "text": "有人離職後，剩下的人開始重新計算自己的班、自己的腰、自己的生活。你第一次發現空白班表也會有重量。",
+    "tags": ["人力", "後續"],
+    "type": "followup",
+    "weight": 0,
+    "oneShot": false,
+    "choices": [
+      { "label": "開誠布公談人力與班表", "condition": { "hasNpcRole": "照服員" }, "effect": { "morale": 7, "stress": 8 }, "result": "你沒有保證不會再缺人。你只保證缺人的時候不裝作沒事。", "npcEffect": { "role": "照服員", "loyalty": 6 } },
+      { "label": "先把班排出來再說", "condition": { "hasNpcRole": "照服員" }, "effect": { "quality": 2, "morale": -7, "stress": 6 }, "result": "班排出來了。人心沒有。", "npcEffect": { "role": "照服員", "loyalty": -5 } },
+      { "label": "啟動招募與人力調整", "effect": { "budget": -10, "morale": 4, "quality": 4, "stress": 7 }, "result": "你刊出職缺。三天內有兩個已讀，一個問薪水。", "clearShortage": true }
+    ]
+  }
+]

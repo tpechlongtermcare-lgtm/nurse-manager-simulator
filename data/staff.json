@@ -1,0 +1,17 @@
+{
+  "settings": {
+    "dailyStaminaRecovery": 5,
+    "quitThresholds": { "loyaltyBelow": 20, "staminaBelow": 15 },
+    "quitMoraleEffect": -12,
+    "shortageQualityDailyEffect": -2,
+    "quitFollowUp": { "id": "quit_chain", "delay": 4 }
+  },
+  "staff": [
+    { "id": "npc_meimei", "name": "小美", "role": "照服員", "trait": "常請假", "traitDesc": "身體不太好，但住民都很喜歡她。", "stamina": 70, "loyalty": 65 },
+    { "id": "npc_azhu", "name": "阿珠姐", "role": "照服員", "trait": "二十年資歷", "traitDesc": "技術最好，脾氣也最硬。", "stamina": 82, "loyalty": 58 },
+    { "id": "npc_afu", "name": "阿福", "role": "照服員", "trait": "慢工出細活", "traitDesc": "什麼都好，就是每件事都比預計多十分鐘。", "stamina": 78, "loyalty": 72 },
+    { "id": "npc_yijun", "name": "怡君", "role": "護理師", "trait": "新人", "traitDesc": "玻璃心，很認真，筆記比交班本還完整。", "stamina": 68, "loyalty": 76 },
+    { "id": "npc_jianhong", "name": "建宏", "role": "護理師", "trait": "可靠", "traitDesc": "什麼都能接，但手機裡已經開著求職網站。", "stamina": 74, "loyalty": 48 },
+    { "id": "npc_lixue", "name": "麗雪", "role": "行政", "trait": "公文之神", "traitDesc": "萬年學不會 Excel，但公文寫得像中央部會發的。", "stamina": 85, "loyalty": 80 }
+  ]
+}

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "walkaround",
+    "name": "走動式管理",
+    "desc": "出去繞一圈。通常會發現原本不知道比較幸福的事。",
+    "ap": 1,
+    "oncePerDay": true,
+    "effect": { "quality": 4, "stress": 2 },
+    "hiddenDraw": { "chance": 0.35, "tag": "隱藏" }
+  },
+  {
+    "id": "audit",
+    "name": "技術稽核",
+    "desc": "品質上升，氣氛下降。兩者都是真的。",
+    "ap": 2,
+    "oncePerDay": true,
+    "effect": { "quality": 9, "compliance": 5, "morale": -6, "stress": 4 }
+  },
+  {
+    "id": "schedule_loose",
+    "name": "排班（放水版）",
+    "desc": "大家比較開心，班表本人比較危險。",
+    "ap": 2,
+    "oncePerDay": true,
+    "exclusiveGroup": "schedule",
+    "effect": { "morale": 10, "quality": -5, "stress": 3 }
+  },
+  {
+    "id": "schedule_tight",
+    "name": "排班（嚴格版）",
+    "desc": "班表很漂亮。群組突然安靜。",
+    "ap": 2,
+    "oncePerDay": true,
+    "exclusiveGroup": "schedule",
+    "effect": { "quality": 7, "morale": -9, "stress": 5 }
+  },
+  {
+    "id": "family_meeting",
+    "name": "家屬會談",
+    "desc": "把二十分鐘的問題談成一個小時。",
+    "ap": 1,
+    "oncePerDay": true,
+    "effect": { "family": 9, "stress": 6 }
+  },
+  {
+    "id": "paperwork",
+    "name": "補文件",
+    "desc": "事情做過不算，寫過才算。",
+    "ap": 2,
+    "oncePerDay": true,
+    "effect": { "compliance": 12, "stress": 9 }
+  },
+  {
+    "id": "training",
+    "name": "辦教育訓練",
+    "desc": "大家都知道很重要，大家也都問可不可以不要今天。",
+    "ap": 2,
+    "oncePerDay": true,
+    "effect": { "quality": 7, "compliance": 4, "morale": -5, "stress": 3 }
+  },
+  {
+    "id": "chat_resident",
+    "name": "陪住民聊天",
+    "desc": "不是 KPI，但你會突然想起自己為什麼來這裡。",
+    "ap": 1,
+    "oncePerDay": true,
+    "effect": { "family": 5, "stress": -7, "quality": 2 },
+    "statDelta": { "chatCount": 1 }
+  },
+  {
+    "id": "order_drinks",
+    "name": "訂飲料",
+    "desc": "液態團隊凝聚力。",
+    "ap": 1,
+    "oncePerDay": false,
+    "effect": { "morale": 12, "budget": -8, "stress": -2 },
+    "repeatEffectMultiplier": { "morale": 0.5 },
+    "statDelta": { "drinkCount": 1 }
+  },
+  {
+    "id": "restock",
+    "name": "補衛材庫存",
+    "desc": "把今天的預算換成明天不用被罵。",
+    "ap": 1,
+    "oncePerDay": true,
+    "effect": { "quality": 3, "budget": -5, "compliance": 3 }
+  },
+  {
+    "id": "go_home",
+    "name": "準時下班",
+    "desc": "一個看似普通、實際上極具政治性的選項。",
+    "ap": "all",
+    "oncePerDay": true,
+    "effect": { "stress": -8 },
+    "endDay": true,
+    "abandonRemainingAP": true
+  }
+]
