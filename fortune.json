@@ -1,0 +1,143 @@
+[
+  {
+    "good": "走動",
+    "bad": "開會",
+    "modifier": {
+      "action": "walkaround",
+      "bonus": 2
+    },
+    "fatigueAside": "你盯著交班內容兩秒，才發現剛剛沒有讀進去。"
+  },
+  {
+    "good": "訂飲料",
+    "bad": "講道理",
+    "modifier": {
+      "action": "order_drinks",
+      "bonus": 2
+    },
+    "fatigueAside": "咖啡還在手上，你已經忘記自己有沒有喝過。"
+  },
+  {
+    "good": "陪住民",
+    "bad": "看訊息",
+    "modifier": {
+      "action": "chat_resident",
+      "bonus": 2
+    },
+    "fatigueAside": "有人叫了第二次護理長，你才抬頭。"
+  },
+  {
+    "good": "閉嘴",
+    "bad": "主動幫忙",
+    "modifier": {},
+    "fatigueAside": "你把手機打開，又忘了原本要看什麼。"
+  },
+  {
+    "good": "裝忙",
+    "bad": "經過主任辦公室",
+    "modifier": {},
+    "fatigueAside": "這行字今天比平常多讀了一遍。"
+  },
+  {
+    "good": "補文件",
+    "bad": "回想昨天",
+    "modifier": {
+      "action": "paperwork",
+      "bonus": 2
+    },
+    "fatigueAside": "你短暫地羨慕了一下那台關機的印表機。"
+  },
+  {
+    "good": "盤庫存",
+    "bad": "打開群組",
+    "modifier": {
+      "action": "restock",
+      "bonus": 2
+    },
+    "fatigueAside": "你發現自己正在用原子筆敲桌面。"
+  },
+  {
+    "good": "準時下班",
+    "bad": "最後看一眼信箱",
+    "modifier": {
+      "action": "go_home",
+      "bonus": 2
+    },
+    "fatigueAside": "午餐時間早就過了，但沒有人正式宣布。"
+  },
+  {
+    "good": "教育訓練",
+    "bad": "問大家有沒有問題",
+    "modifier": {
+      "action": "training",
+      "bonus": 2
+    }
+  },
+  {
+    "good": "先吃飯",
+    "bad": "說只要五分鐘",
+    "modifier": {}
+  },
+  {
+    "good": "深呼吸",
+    "bad": "接未知來電",
+    "modifier": {}
+  },
+  {
+    "good": "排班",
+    "bad": "承諾一定排到",
+    "modifier": {
+      "action": "schedule_loose",
+      "bonus": 2
+    }
+  },
+  {
+    "good": "稽核",
+    "bad": "臨時抽查",
+    "modifier": {
+      "action": "audit",
+      "bonus": 3
+    }
+  },
+  {
+    "good": "家屬會談",
+    "bad": "說這很簡單",
+    "modifier": {
+      "action": "family_meeting",
+      "bonus": 2
+    }
+  },
+  {
+    "good": "看住民笑",
+    "bad": "看未讀 99+",
+    "modifier": {
+      "action": "chat_resident",
+      "bonus": 3
+    }
+  },
+  {
+    "good": "借東西",
+    "bad": "借人",
+    "modifier": {}
+  },
+  {
+    "good": "喝水",
+    "bad": "喝第三杯咖啡",
+    "modifier": {}
+  },
+  {
+    "good": "先問清楚",
+    "bad": "我以為",
+    "modifier": {}
+  },
+  {
+    "good": "留白",
+    "bad": "把行程排滿",
+    "modifier": {}
+  },
+  {
+    "good": "今天就今天",
+    "bad": "明天再說",
+    "modifier": {}
+  }
+]
