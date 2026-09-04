@@ -141,6 +141,11 @@ test("data files have valid references and supported fields", () => {
   const visitorIds = new Set(data.scene.visitors.map(item => item.id));
 
   assert(data.staff.staff.length === 6, `預期 6 位 NPC，實際 ${data.staff.staff.length}`);
+  assert(data.staff.interactions.length >= 3, "NPC 至少需要三種可執行互動");
+  for (const interaction of data.staff.interactions) {
+    assert(interaction.id && interaction.label && interaction.result && interaction.bubble, "NPC 互動資料不完整");
+    assert(Number.isInteger(interaction.ap) && interaction.ap > 0, `${interaction.id} AP 無效`);
+  }
   assert(data.staff.manager?.name && data.staff.manager?.role, "護理長顯示資料不完整");
   for (const mood of ["happy", "normal", "tired", "burning"]) {
     assert(data.staff.manager.thoughts?.[mood], `護理長缺少 ${mood} 心聲`);
@@ -165,6 +170,7 @@ test("data files have valid references and supported fields", () => {
     assert(Number.isFinite(npc.scene?.x) && npc.scene.x >= 0 && npc.scene.x <= 100, `${npc.id} 場景 x 無效`);
     assert(Number.isFinite(npc.scene?.y) && npc.scene.y >= 0 && npc.scene.y <= 100, `${npc.id} 場景 y 無效`);
     assert(Number.isFinite(npc.scene?.scale) && npc.scene.scale > 0, `${npc.id} 場景 scale 無效`);
+    assert(Number.isFinite(npc.scene?.motionX) && Number.isFinite(npc.scene?.motionY), `${npc.id} 缺少移動路徑`);
     for (const mood of ["happy", "worried", "tired", "quit"]) {
       assert(npc.thoughts?.[mood], `${npc.id} 缺少 ${mood} 心聲`);
     }
@@ -233,6 +239,20 @@ test("manager and NPC visual moods follow meter thresholds", () => {
   assert(npcMood({ stamina: 39, loyalty: 70 }) === "tired", "體力低於 40 應為疲累");
   assert(npcMood({ stamina: 70, loyalty: 54 }) === "worried", "忠誠低於 55 應為動搖");
   assert(npcMood({ stamina: 90, loyalty: 90, quit: true }) === "quit", "離職狀態應優先顯示");
+});
+
+test("NPC interactions spend AP, change relationship, and cannot repeat on the same day", () => {
+  const engine = makeEngine();
+  engine.beginDay();
+  const before = engine.state.staff.find(npc => npc.id === "npc_meimei");
+  const outcome = engine.interactWithNpc("npc_meimei", "check_in");
+  assert(!outcome.error, outcome.error || "NPC 互動失敗");
+  assert(engine.state.ap === 4, "NPC 互動應扣除 1 AP");
+  assert(before.loyalty === 71 && before.stamina === 73, "NPC 忠誠或體力變化錯誤");
+  assert(engine.state.meters.morale === 63 && engine.state.meters.stress === 32, "NPC 互動指標變化錯誤");
+  assert(outcome.bubble === "謝謝你先問我。", "NPC 場景反應文字錯誤");
+  assert(engine.interactWithNpc("npc_meimei", "check_in").error === "今天已經做過了", "同日重複互動未被阻止");
+  assert(engine.state.log.some(item => item.type === "npcInteraction"), "NPC 互動未寫入日誌");
 });
 
 test("days 1-5 draw one event and stress 80 reduces AP to 3", () => {

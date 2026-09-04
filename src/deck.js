@@ -1,4 +1,4 @@
-import { compare, parseComparator } from "./effects.js";
+import { compare, parseComparator } from "./effects.js?v=2.2.0";
 
 const RESERVED = new Set(["minDay", "maxDay", "hasNpcRole", "hasNpcId", "notSeen"]);
 

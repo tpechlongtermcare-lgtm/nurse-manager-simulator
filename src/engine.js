@@ -1,13 +1,14 @@
-import { applyEffects, applyStatDelta, evaluateRule, clamp } from "./effects.js";
-import { drawDailyEvents, passesChoiceCondition, passesCondition, resolveEvent, weightedDraw } from "./deck.js";
-import { applyNpcEffect, markPendingQuits, processMorningQuits, recoverStaff } from "./staff.js";
-import { saveGame, loadAchievements, saveAchievements } from "./state.js";
+import { applyEffects, applyStatDelta, evaluateRule, clamp } from "./effects.js?v=2.2.0";
+import { drawDailyEvents, passesChoiceCondition, passesCondition, resolveEvent, weightedDraw } from "./deck.js?v=2.2.0";
+import { applyNpcEffect, markPendingQuits, processMorningQuits, recoverStaff } from "./staff.js?v=2.2.0";
+import { saveGame, loadAchievements, saveAchievements } from "./state.js?v=2.2.0";
 
 export class GameEngine {
   constructor(state, data) {
     this.state = state;
     this.data = data;
     this.staffSettings = data.staff.settings;
+    this.state.npcInteractionsToday ||= {};
   }
 
   getEvent(id) {
@@ -29,6 +30,7 @@ export class GameEngine {
     s.ap = s.maxAp;
     s.actionsToday = [];
     s.actionCountsToday = {};
+    s.npcInteractionsToday = {};
     s.endedByGoHome = false;
     s.abandonedAP = 0;
     s.stats.crisisHandledToday = 0;
@@ -126,7 +128,7 @@ export class GameEngine {
     this.updateAchievements("any");
     const ending = this.checkEnding(false);
     this.persist();
-    return { result: resultText, changes: meterChanges, npc, ending };
+    return { result: resultText, changes: meterChanges, npc, followUp: choice.followUp || null, ending };
   }
 
   actionAvailability(action) {
@@ -205,6 +207,47 @@ export class GameEngine {
     const ending = this.checkEnding(false);
     this.persist();
     return { changes, hiddenEvent, ending, endDay: Boolean(action.endDay) };
+  }
+
+  npcInteractionAvailability(npcId, interaction) {
+    const npc = this.state.staff.find(item => item.id === npcId);
+    if (!npc || npc.quit) return { ok: false, reason: "這位同仁已不在班上" };
+    if (!interaction) return { ok: false, reason: "互動不存在" };
+    const key = `${npcId}:${interaction.id}`;
+    if (interaction.oncePerNpcPerDay && this.state.npcInteractionsToday[key]) {
+      return { ok: false, reason: "今天已經做過了" };
+    }
+    if (this.state.ap < interaction.ap) return { ok: false, reason: `需要 ${interaction.ap} AP` };
+    return { ok: true, reason: "" };
+  }
+
+  interactWithNpc(npcId, interactionId) {
+    const interaction = (this.data.staff.interactions || []).find(item => item.id === interactionId);
+    const availability = this.npcInteractionAvailability(npcId, interaction);
+    if (!availability.ok) return { error: availability.reason };
+    const npcBefore = this.state.staff.find(item => item.id === npcId);
+    this.state.ap -= interaction.ap;
+    const changes = applyEffects(this.state, interaction.effect);
+    const npc = applyNpcEffect(this.state, { npcId, ...(interaction.npcEffect || {}) });
+    const key = `${npcId}:${interaction.id}`;
+    this.state.npcInteractionsToday[key] = true;
+    this.state.actionsToday.push(`npc:${interaction.id}:${npcId}`);
+    const result = String(interaction.result || "").replaceAll("{{name}}", npcBefore?.name || "同仁");
+    this.state.log.push({
+      day: this.state.day,
+      type: "npcInteraction",
+      npcId,
+      interactionId,
+      result,
+      changes,
+      npcChanges: interaction.npcEffect || {},
+      ap: interaction.ap
+    });
+    this.updateAchievements("any");
+    const ending = this.checkEnding(false);
+    this.persist();
+    const bubble = String(interaction.bubble || "").replaceAll("{{name}}", npcBefore?.name || "同仁");
+    return { result, bubble, changes, npc, npcChanges: interaction.npcEffect || {}, reaction: interaction.reaction, sound: interaction.sound, ending };
   }
 
   endDay() {

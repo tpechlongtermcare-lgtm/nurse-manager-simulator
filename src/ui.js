@@ -1,4 +1,4 @@
-import { loadAchievements } from "./state.js";
+import { loadAchievements } from "./state.js?v=2.2.0";
 
 const METER_LABELS = {
   quality: "品質",
@@ -135,6 +135,7 @@ export class GameUI {
                   <button id="homeBtn">首頁</button>
                 </nav>
               </div>
+              ${this.renderBurden(state)}
               ${state.phase === "events" && event ? this.renderEvent(engine, event) : this.renderActions(engine)}
             </div>
           </div>
@@ -213,8 +214,10 @@ export class GameUI {
           const x = Number.isFinite(Number(npc.scene?.x)) ? Number(npc.scene.x) : 12 + index * 14;
           const y = Number.isFinite(Number(npc.scene?.y)) ? Number(npc.scene.y) : 25 + index % 2 * 40;
           const scale = Number.isFinite(Number(npc.scene?.scale)) ? Number(npc.scene.scale) : 1;
+          const motionX = Number.isFinite(Number(npc.scene?.motionX)) ? Number(npc.scene.motionX) : 0;
+          const motionY = Number.isFinite(Number(npc.scene?.motionY)) ? Number(npc.scene.motionY) : -2;
           const spriteRow = Math.max(0, Math.min(5, Number(npc.spriteRow) || 0));
-          return `<button class="npc-figure mood-${moodName}" data-npc="${esc(npc.id)}" style="--scene-x:${x}%;--scene-y:${y}%;--scene-scale:${scale};--sprite-y:${spriteRow * 20}%" aria-label="${esc(npc.name)}，${esc(npc.role)}，${esc(NPC_MOOD_LABELS[moodName])}">
+          return `<button class="npc-figure mood-${moodName}" data-npc="${esc(npc.id)}" style="--scene-x:${x}%;--scene-y:${y}%;--scene-scale:${scale};--sprite-y:${spriteRow * 20}%;--idle-delay:${index * -0.73}s;--idle-duration:${3.2 + index * .27}s;--roam-x:${motionX}px;--roam-y:${motionY}px" aria-label="${esc(npc.name)}，${esc(npc.role)}，${esc(NPC_MOOD_LABELS[moodName])}">
             <span class="npc-sprite" aria-hidden="true"></span>
             <span class="npc-name">${esc(npc.name)}</span>
             <span class="npc-state-dot" aria-hidden="true"></span>
@@ -251,6 +254,38 @@ export class GameUI {
       </div>`;
   }
 
+  renderBurden(state) {
+    const unresolved = state.phase === "events" ? state.eventQueue.length + 1 : 0;
+    const riskyStaff = state.staff.filter(npc => !npc.quit && (npc.stamina < 40 || npc.loyalty < 55)).length;
+    const pending = state.pendingEvents.length;
+    const reality = state.staffShortage
+      ? "缺一個人，工作不會跟著少一份。"
+      : state.meters.stress >= 80
+        ? "你只剩 3 AP，但每個人仍把你當最後一道防線。"
+        : pending > 0
+          ? "今天處理完，不代表事情已經結束。"
+          : "每花 1 AP 救一件事，就等於讓另一件事再等一下。";
+    return `<aside class="burden-strip" aria-label="護理長同時承受的工作">
+      <div class="burden-head"><strong>護理長腦內待辦</strong><span>${esc(reality)}</span></div>
+      <div class="burden-counts">
+        <span class="${unresolved ? "hot" : ""}">眼前事件 <b>${unresolved}</b></span>
+        <span class="${pending ? "bomb" : ""}">延遲炸彈 <b>${pending}</b></span>
+        <span class="${riskyStaff ? "risk" : ""}">人力風險 <b>${riskyStaff}</b></span>
+      </div>
+    </aside>`;
+  }
+
+  renderChoiceImpact(choice) {
+    const impacts = formatDelta(choice.effect).map(item => {
+      const risky = item.key === "stress" ? item.value > 0 : item.value < 0;
+      return `<span class="choice-impact ${risky ? "risky" : "helpful"}">${esc(item.label)} ${item.value > 0 ? "↑" : "↓"}</span>`;
+    });
+    if (choice.requireAP) impacts.push(`<span class="choice-impact ap-cost">消耗 ${choice.requireAP} AP</span>`);
+    if (choice.npcEffect) impacts.push(`<span class="choice-impact people">影響同仁</span>`);
+    if (choice.followUp) impacts.push(`<span class="choice-impact bomb">可能留下後續</span>`);
+    return impacts.join("");
+  }
+
   renderEvent(engine, event) {
     const state = engine.state;
     const burning = state.meters.stress >= 80;
@@ -280,6 +315,7 @@ export class GameUI {
               <span class="choice-arrow" aria-hidden="true">↳</span>
               <span class="choice-copy">${esc(choice.label)}${burning ? "……" : ""}
                 ${available.ok ? "" : `<span class="reason">${esc(available.reason)}</span>`}
+                <span class="choice-impact-row">${this.renderChoiceImpact(choice)}</span>
               </span>
             </button>`;
           }).join("")}
@@ -313,7 +349,14 @@ export class GameUI {
 
   bindGameEvents(engine) {
     this.root.querySelectorAll("[data-choice]").forEach(button => {
-      button.addEventListener("click", () => this.callbacks.onChoice(Number(button.dataset.choice)));
+      button.addEventListener("click", () => {
+        if (button.disabled || button.classList.contains("choice-committed")) return;
+        this.callbacks.onUiCue?.("click");
+        button.classList.add("choice-committed");
+        button.closest(".choice-list")?.classList.add("choices-lock");
+        this.root.querySelectorAll("[data-choice]").forEach(choice => { choice.disabled = true; });
+        setTimeout(() => this.callbacks.onChoice(Number(button.dataset.choice)), 260);
+      });
     });
     this.root.querySelectorAll("[data-action]").forEach(button => {
       button.addEventListener("click", () => this.callbacks.onAction(button.dataset.action));
@@ -324,7 +367,7 @@ export class GameUI {
     this.root.querySelector("#soundBtn")?.addEventListener("click", this.callbacks.onSoundToggle);
     this.root.querySelector("#homeBtn")?.addEventListener("click", this.callbacks.onHome);
     this.root.querySelectorAll("[data-npc]").forEach(button => {
-      button.addEventListener("click", () => this.showNpc(engine.state, button.dataset.npc));
+      button.addEventListener("click", () => this.showNpc(engine, button.dataset.npc));
     });
     this.root.querySelector("[data-manager]")?.addEventListener("click", () => this.showManager(engine.state));
     this.root.querySelectorAll("[data-hotspot]").forEach(button => {
@@ -421,7 +464,8 @@ export class GameUI {
     overlay.querySelector(".overlay-paper").focus({ preventScroll: true });
   }
 
-  showNpc(state, npcId) {
+  showNpc(engine, npcId) {
+    const state = engine.state;
     const returnFocus = document.activeElement;
     const npc = this.getStaffViews(state).find(item => item.id === npcId);
     if (!npc) return;
@@ -446,6 +490,18 @@ export class GameUI {
           <div class="npc-detail-row"><span>體力</span><div class="npc-detail-track"><i style="width:${npc.stamina}%"></i></div><strong>${npc.stamina}</strong></div>
           <div class="npc-detail-row"><span>忠誠</span><div class="npc-detail-track loyalty"><i style="width:${npc.loyalty}%"></i></div><strong>${npc.loyalty}</strong></div>
         </div>
+        <div class="npc-interaction-head"><strong>你要怎麼帶這位同仁？</strong><span>關係也會消耗 AP</span></div>
+        <div class="npc-interaction-list">
+          ${(this.data.staff?.interactions || []).map(interaction => {
+            const availability = engine.npcInteractionAvailability(npc.id, interaction);
+            const npcEffects = Object.entries(interaction.npcEffect || {}).map(([key, value]) => `<span class="${value >= 0 ? "pos" : "neg"}">${key === "stamina" ? "體力" : "忠誠"} ${value > 0 ? "+" : ""}${value}</span>`).join("");
+            return `<button class="npc-interaction-btn" data-npc-interaction="${esc(interaction.id)}" ${availability.ok ? "" : "disabled"}>
+              <span><strong>${esc(interaction.label)}</strong><small>${esc(interaction.description)}</small><em>${npcEffects}</em></span>
+              <b>${interaction.ap} AP</b>
+              ${availability.ok ? "" : `<i>${esc(availability.reason)}</i>`}
+            </button>`;
+          }).join("")}
+        </div>
         <button class="secondary-btn" id="closeNpc">回到護理站</button>
       </section>`;
     document.body.appendChild(overlay);
@@ -459,7 +515,30 @@ export class GameUI {
     overlay.querySelector("#closeNpc").addEventListener("click", close);
     overlay.addEventListener("click", event => { if (event.target === overlay) close(); });
     overlay.addEventListener("keydown", event => { if (event.key === "Escape") close(); });
+    overlay.querySelectorAll("[data-npc-interaction]").forEach(button => {
+      button.addEventListener("click", () => {
+        if (button.disabled) return;
+        overlay.remove();
+        this.callbacks.onNpcInteraction(npc.id, button.dataset.npcInteraction);
+      });
+    });
     overlay.querySelector(".npc-paper").focus({ preventScroll: true });
+  }
+
+  showSceneReaction(npcId, text, reaction = "busy") {
+    const figure = this.root.querySelector(`[data-npc="${CSS.escape(npcId)}"]`);
+    if (!figure) return;
+    figure.classList.add(`react-${reaction}`);
+    const bubble = document.createElement("span");
+    bubble.className = "scene-reaction";
+    bubble.textContent = text;
+    figure.appendChild(bubble);
+    this.root.querySelector(".manager-figure")?.classList.add("manager-react");
+    setTimeout(() => {
+      bubble.remove();
+      figure.classList.remove(`react-${reaction}`);
+      this.root.querySelector(".manager-figure")?.classList.remove("manager-react");
+    }, 2800);
   }
 
   showDawn(state, quitters = [], onContinue) {
@@ -485,20 +564,29 @@ export class GameUI {
     });
   }
 
-  showResult(result, changes, onContinue) {
+  showResult(result, changes, onContinue, context = {}) {
     const deltas = formatDelta(changes);
+    const mood = managerMood(context.state?.meters?.stress ?? 30);
+    const hasCost = deltas.some(item => item.key === "stress" ? item.value > 0 : item.value < 0);
     const overlay = document.createElement("div");
     overlay.className = "overlay";
     overlay.innerHTML = `
-      <section class="overlay-paper" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
-        <div class="eyebrow" id="resultTitle">處理結果</div>
+      <section class="overlay-paper result-paper ${hasCost ? "has-cost" : ""}" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+        <div class="result-head">
+          <div class="result-manager-sprite manager-${mood}"><span class="manager-sprite" aria-hidden="true"></span></div>
+          <div><div class="eyebrow">這個決定已經做了</div><h2 id="resultTitle">現場會記得結果</h2></div>
+        </div>
         <p class="result-line">${esc(result)}</p>
         <div class="delta-line">
           ${deltas.map(item => `<span class="delta-chip ${item.value > 0 ? "pos" : "neg"}">${esc(item.label)} ${item.value > 0 ? "+" : ""}${item.value}</span>`).join("")}
         </div>
-        <button class="primary-btn" id="resultContinue">知道了，下一件</button>
+        ${context.npc ? `<div class="result-person"><strong>${esc(context.npc.name)}</strong><span>現在體力 ${context.npc.stamina}・忠誠 ${context.npc.loyalty}</span></div>` : ""}
+        ${context.followUp ? `<div class="followup-warning"><strong>延遲炸彈已埋下</strong><span>${context.followUp.delay} 天後，這件事可能回來。</span></div>` : ""}
+        <button class="primary-btn" id="resultContinue">承擔結果，處理下一件</button>
       </section>`;
     document.body.appendChild(overlay);
+    const sprite = overlay.querySelector(".manager-sprite");
+    if (sprite && this.data.staff?.visuals?.managerSprite) sprite.style.backgroundImage = `url("${this.data.staff.visuals.managerSprite}")`;
     const continueButton = overlay.querySelector("#resultContinue");
     continueButton.focus({ preventScroll: true });
     continueButton.addEventListener("click", () => {

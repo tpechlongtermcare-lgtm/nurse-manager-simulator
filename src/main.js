@@ -1,7 +1,7 @@
-import { createInitialState, loadSave, clearSave } from "./state.js";
-import { GameEngine } from "./engine.js";
-import { GameUI } from "./ui.js";
-import { GameAudio } from "./audio.js";
+import { createInitialState, loadSave, clearSave } from "./state.js?v=2.2.0";
+import { GameEngine } from "./engine.js?v=2.2.0";
+import { GameUI } from "./ui.js?v=2.2.0";
+import { GameAudio } from "./audio.js?v=2.2.0";
 
 const root = document.querySelector("#app");
 let data = null;
@@ -46,6 +46,8 @@ function createUI() {
     onSettle: settleDay,
     onHome: showHome,
     onSceneAction: handleSceneAction,
+    onNpcInteraction: handleNpcInteraction,
+    onUiCue: cue => audio.play(cue),
     onSoundToggle: toggleSound,
     isSoundEnabled: () => audio.isEnabled()
   });
@@ -88,14 +90,13 @@ function continueGame() {
 }
 
 function handleChoice(index) {
-  audio.play("click");
   const outcome = engine.choose(index);
   if (!outcome || outcome.error) return;
   audio.play("result");
   ui.showResult(outcome.result, outcome.changes, () => {
     if (outcome.ending) ui.renderEnding(engine);
     else renderCurrentGame();
-  });
+  }, { state: engine.state, npc: outcome.npc, followUp: outcome.followUp });
 }
 
 function handleAction(actionId, sound = "click") {
@@ -117,6 +118,19 @@ function handleAction(actionId, sound = "click") {
 
 function handleSceneAction(actionId, sound) {
   handleAction(actionId, sound || "click");
+}
+
+function handleNpcInteraction(npcId, interactionId) {
+  const outcome = engine.interactWithNpc(npcId, interactionId);
+  if (!outcome || outcome.error) return;
+  audio.play(outcome.sound || "result");
+  if (outcome.ending) {
+    ui.renderEnding(engine);
+    return;
+  }
+  renderCurrentGame();
+  ui.showToast(outcome.changes);
+  ui.showSceneReaction(npcId, outcome.bubble || outcome.result, outcome.reaction);
 }
 
 function settleDay() {

@@ -1,4 +1,4 @@
-import { clamp } from "./effects.js";
+import { clamp } from "./effects.js?v=2.2.0";
 
 function pickNpc(state, effect) {
   const active = state.staff.filter(npc => !npc.quit);

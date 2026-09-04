@@ -18,6 +18,7 @@ export function createInitialState(staffData) {
     currentEventId: null,
     actionsToday: [],
     actionCountsToday: {},
+    npcInteractionsToday: {},
     endedByGoHome: false,
     abandonedAP: 0,
     fortune: null,
