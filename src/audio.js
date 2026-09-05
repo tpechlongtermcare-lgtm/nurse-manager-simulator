@@ -88,6 +88,9 @@ export class GameAudio {
     } else if (name === "drink") {
       this.tone(520, 0, 0.08, 0.025, "sine");
       this.tone(780, 0.08, 0.13, 0.03, "sine");
+    } else if (name === "step") {
+      this.noise(0.045, 0.012, 260);
+      this.tone(105, 0, 0.045, 0.009, "triangle");
     } else if (name === "on") {
       this.tone(440, 0, 0.08, 0.035, "sine");
       this.tone(660, 0.08, 0.12, 0.03, "sine");

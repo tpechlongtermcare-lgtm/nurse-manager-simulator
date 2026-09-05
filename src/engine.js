@@ -1,7 +1,7 @@
-import { applyEffects, applyStatDelta, evaluateRule, clamp } from "./effects.js?v=2.2.0";
-import { drawDailyEvents, passesChoiceCondition, passesCondition, resolveEvent, weightedDraw } from "./deck.js?v=2.2.0";
-import { applyNpcEffect, markPendingQuits, processMorningQuits, recoverStaff } from "./staff.js?v=2.2.0";
-import { saveGame, loadAchievements, saveAchievements } from "./state.js?v=2.2.0";
+import { applyEffects, applyStatDelta, evaluateRule, clamp } from "./effects.js?v=2.3.4";
+import { drawDailyEvents, passesChoiceCondition, passesCondition, resolveEvent, weightedDraw } from "./deck.js?v=2.3.4";
+import { applyNpcEffect, markPendingQuits, processMorningQuits, recoverStaff } from "./staff.js?v=2.3.4";
+import { saveGame, loadAchievements, saveAchievements } from "./state.js?v=2.3.4";
 
 export class GameEngine {
   constructor(state, data) {

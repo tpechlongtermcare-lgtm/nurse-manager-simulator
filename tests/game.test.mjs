@@ -24,7 +24,7 @@ const { GameEngine } = await import("../src/engine.js");
 const { createInitialState, loadAchievements, loadSave } = await import("../src/state.js");
 const { drawDailyEvents, weightedDraw } = await import("../src/deck.js");
 const { markPendingQuits, processMorningQuits } = await import("../src/staff.js");
-const { managerMood, npcMood } = await import("../src/ui.js");
+const { managerMood, npcMood, moveScenePosition, findNearestSceneTarget } = await import("../src/ui.js");
 const { GameAudio } = await import("../src/audio.js");
 
 async function readJSON(relativePath) {
@@ -158,6 +158,9 @@ test("data files have valid references and supported fields", () => {
   assert(existsSync(new URL(`../${data.scene.visuals.visitorSprite.slice(2)}`, import.meta.url)), "訪客人物素材不存在");
   assert(data.scene.visitors.length === 3, "應有主任、督導與衛生局稽查員三位訪客");
   assert(data.scene.hotspots.length >= 6, "護理站至少需要六個可互動物件");
+  assert(Number.isFinite(data.scene.controls?.speed) && data.scene.controls.speed > 0, "街機移動速度無效");
+  assert(Number.isFinite(data.scene.controls?.interactionRadius) && data.scene.controls.interactionRadius > 0, "街機互動距離無效");
+  assert(Number.isFinite(data.scene.controls?.start?.x) && Number.isFinite(data.scene.controls?.start?.y), "護理長起始位置無效");
   for (const hotspot of data.scene.hotspots) {
     assert(actionIds.has(hotspot.actionId), `${hotspot.id} 指向不存在的行動 ${hotspot.actionId}`);
     assert(Number.isFinite(hotspot.x) && Number.isFinite(hotspot.y), `${hotspot.id} 缺少場景座標`);
@@ -239,6 +242,23 @@ test("manager and NPC visual moods follow meter thresholds", () => {
   assert(npcMood({ stamina: 39, loyalty: 70 }) === "tired", "體力低於 40 應為疲累");
   assert(npcMood({ stamina: 70, loyalty: 54 }) === "worried", "忠誠低於 55 應為動搖");
   assert(npcMood({ stamina: 90, loyalty: 90, quit: true }) === "quit", "離職狀態應優先顯示");
+});
+
+test("arcade movement normalizes diagonals, respects bounds, and finds nearby targets", () => {
+  const controls = data.scene.controls;
+  const straight = moveScenePosition({ x: 50, y: 50 }, { x: 1, y: 0 }, 1, controls);
+  const diagonal = moveScenePosition({ x: 50, y: 50 }, { x: 1, y: 1 }, 1, controls);
+  assert(straight.x === 77 && straight.y === 50, "水平移動速度錯誤");
+  assert(diagonal.x < straight.x && diagonal.y > 50, "斜向移動應正規化且同時改變兩軸");
+  const bounded = moveScenePosition({ x: 91, y: 83 }, { x: 1, y: 1 }, 1, controls);
+  assert(bounded.x === controls.bounds.xMax && bounded.y === controls.bounds.yMax, "人物未限制在場景邊界內");
+  const nearby = findNearestSceneTarget(
+    { x: 50, y: 50 },
+    [{ id: "far", x: 80, y: 80 }, { id: "near", x: 55, y: 52 }],
+    controls.interactionRadius
+  );
+  assert(nearby?.id === "near", "沒有選到最近的互動目標");
+  assert(findNearestSceneTarget({ x: 5, y: 5 }, [{ id: "far", x: 80, y: 80 }], 3) === null, "距離外目標不應可互動");
 });
 
 test("NPC interactions spend AP, change relationship, and cannot repeat on the same day", () => {

@@ -2,6 +2,15 @@
   "visuals": {
     "visitorSprite": "./assets/visitors.png"
   },
+  "controls": {
+    "start": { "x": 50, "y": 50 },
+    "bounds": { "xMin": 8, "xMax": 92, "yMin": 16, "yMax": 84 },
+    "speed": 27,
+    "verticalSpeed": 1.3,
+    "interactionRadius": 14,
+    "keyboard": "方向鍵／WASD",
+    "interactKey": "E"
+  },
   "hotspots": [
     {
       "id": "computer",

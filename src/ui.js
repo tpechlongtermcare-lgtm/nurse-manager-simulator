@@ -1,4 +1,4 @@
-import { loadAchievements } from "./state.js?v=2.2.0";
+import { loadAchievements } from "./state.js?v=2.3.4";
 
 const METER_LABELS = {
   quality: "品質",
@@ -45,15 +45,48 @@ export function npcMood(npc) {
   return "happy";
 }
 
+export function moveScenePosition(position, input, elapsedSeconds, controls = {}) {
+  const bounds = controls.bounds || {};
+  const xMin = Number.isFinite(bounds.xMin) ? bounds.xMin : 6;
+  const xMax = Number.isFinite(bounds.xMax) ? bounds.xMax : 94;
+  const yMin = Number.isFinite(bounds.yMin) ? bounds.yMin : 12;
+  const yMax = Number.isFinite(bounds.yMax) ? bounds.yMax : 88;
+  const speed = Number.isFinite(controls.speed) ? controls.speed : 27;
+  const verticalSpeed = Number.isFinite(controls.verticalSpeed) ? controls.verticalSpeed : 1.3;
+  const length = Math.hypot(input.x || 0, input.y || 0);
+  if (!length || elapsedSeconds <= 0) return { ...position };
+  const unitX = input.x / Math.max(1, length);
+  const unitY = input.y / Math.max(1, length);
+  const clampValue = (value, min, max) => Math.max(min, Math.min(max, value));
+  return {
+    x: clampValue(position.x + unitX * speed * elapsedSeconds, xMin, xMax),
+    y: clampValue(position.y + unitY * speed * verticalSpeed * elapsedSeconds, yMin, yMax)
+  };
+}
+
+export function findNearestSceneTarget(position, targets, radius = 14) {
+  let nearest = null;
+  for (const target of targets) {
+    if (!Number.isFinite(target.x) || !Number.isFinite(target.y)) continue;
+    const distance = Math.hypot(target.x - position.x, (target.y - position.y) * 2 / 3);
+    if (distance <= radius && (!nearest || distance < nearest.distance)) nearest = { ...target, distance };
+  }
+  return nearest;
+}
+
 export class GameUI {
   constructor(root, data, callbacks) {
     this.root = root;
     this.data = data;
     this.callbacks = callbacks;
     this.previousMeters = null;
+    this.sceneControllerCleanup = null;
+    this.controlledEngine = null;
+    this.playerPosition = null;
   }
 
   renderHome(hasSave = false) {
+    this.stopSceneController();
     const unlocked = loadAchievements();
     const soundOn = this.callbacks.isSoundEnabled?.() !== false;
     this.root.className = "app-shell";
@@ -92,6 +125,7 @@ export class GameUI {
   }
 
   renderGame(engine) {
+    this.stopSceneController();
     const state = engine.state;
     const burning = state.meters.stress >= 80;
     this.root.className = `app-shell ${burning ? "burning" : ""}`;
@@ -153,6 +187,7 @@ export class GameUI {
 
     this.bindGameEvents(engine);
     this.applySceneAssets();
+    this.startSceneController(engine);
     this.animateMeterChanges(state.meters);
     this.previousMeters = structuredClone(state.meters);
   }
@@ -200,11 +235,11 @@ export class GameUI {
         ${(this.data.scene?.hotspots || []).map(hotspot => {
           const action = engine.getAction(hotspot.actionId);
           const availability = action ? engine.actionAvailability(action) : { ok: false, reason: "目前無法使用" };
-          return `<button class="scene-hotspot ${availability.ok ? "" : "unavailable"}" data-hotspot="${esc(hotspot.id)}" style="--hotspot-x:${Number(hotspot.x) || 50}%;--hotspot-y:${Number(hotspot.y) || 50}%" aria-label="操作${esc(hotspot.label)}${availability.ok ? "" : `，${esc(availability.reason)}`}">
+          return `<button class="scene-hotspot ${availability.ok ? "" : "unavailable"}" data-hotspot="${esc(hotspot.id)}" data-scene-target="hotspot" data-target-x="${Number(hotspot.x) || 50}" data-target-y="${Number(hotspot.y) || 50}" data-target-label="${esc(hotspot.label)}" style="--hotspot-x:${Number(hotspot.x) || 50}%;--hotspot-y:${Number(hotspot.y) || 50}%" aria-label="操作${esc(hotspot.label)}${availability.ok ? "" : `，${esc(availability.reason)}`}">
             <span aria-hidden="true">${esc(hotspot.glyph || "＋")}</span><em>${esc(hotspot.label)}</em>
           </button>`;
         }).join("")}
-        <button class="manager-figure manager-${mood}" data-manager aria-label="查看${esc(manager.role)}狀態">
+        <button class="manager-figure manager-${mood} player-controlled" data-manager aria-label="你正在控制${esc(manager.role)}；點擊查看狀態">
           ${visitor ? "" : `<div class="manager-thought">${esc(managerThought)}</div>`}
           <div class="manager-sprite" aria-hidden="true"></div>
           <div class="manager-label"><strong>${esc(manager.name)}</strong><span>${esc(manager.role)}</span></div>
@@ -217,18 +252,23 @@ export class GameUI {
           const motionX = Number.isFinite(Number(npc.scene?.motionX)) ? Number(npc.scene.motionX) : 0;
           const motionY = Number.isFinite(Number(npc.scene?.motionY)) ? Number(npc.scene.motionY) : -2;
           const spriteRow = Math.max(0, Math.min(5, Number(npc.spriteRow) || 0));
-          return `<button class="npc-figure mood-${moodName}" data-npc="${esc(npc.id)}" style="--scene-x:${x}%;--scene-y:${y}%;--scene-scale:${scale};--sprite-y:${spriteRow * 20}%;--idle-delay:${index * -0.73}s;--idle-duration:${3.2 + index * .27}s;--roam-x:${motionX}px;--roam-y:${motionY}px" aria-label="${esc(npc.name)}，${esc(npc.role)}，${esc(NPC_MOOD_LABELS[moodName])}">
+          return `<button class="npc-figure mood-${moodName}" data-npc="${esc(npc.id)}" data-scene-target="npc" data-target-x="${x}" data-target-y="${y}" data-target-label="${esc(npc.name)}" style="--scene-x:${x}%;--scene-y:${y}%;--scene-scale:${scale};--sprite-y:${spriteRow * 20}%;--idle-delay:${index * -0.73}s;--idle-duration:${3.2 + index * .27}s;--roam-x:${motionX}px;--roam-y:${motionY}px" aria-label="${esc(npc.name)}，${esc(npc.role)}，${esc(NPC_MOOD_LABELS[moodName])}">
             <span class="npc-sprite" aria-hidden="true"></span>
             <span class="npc-name">${esc(npc.name)}</span>
             <span class="npc-state-dot" aria-hidden="true"></span>
           </button>`;
         }).join("")}
-        ${visitor ? `<button class="visitor-figure" data-visitor="${esc(visitor.id)}" style="--visitor-x:${Number(visitor.scene?.x) || 84}%;--visitor-y:${Number(visitor.scene?.y) || 45}%;--visitor-scale:${Number(visitor.scene?.scale) || 1};--visitor-sprite-x:${Math.max(0, Math.min(2, Number(visitor.spriteColumn) || 0)) * 50}%" aria-label="${esc(visitor.name)}，${esc(visitor.role)}">
+        ${visitor ? `<button class="visitor-figure" data-visitor="${esc(visitor.id)}" data-scene-target="visitor" data-target-x="${Number(visitor.scene?.x) || 84}" data-target-y="${Number(visitor.scene?.y) || 45}" data-target-label="${esc(visitor.name)}" style="--visitor-x:${Number(visitor.scene?.x) || 84}%;--visitor-y:${Number(visitor.scene?.y) || 45}%;--visitor-scale:${Number(visitor.scene?.scale) || 1};--visitor-sprite-x:${Math.max(0, Math.min(2, Number(visitor.spriteColumn) || 0)) * 50}%" aria-label="${esc(visitor.name)}，${esc(visitor.role)}">
           <span class="visitor-line">${esc(event.actorLine || visitor.defaultLine)}</span>
           <span class="visitor-sprite" aria-hidden="true"></span>
           <span class="visitor-name">${esc(visitor.name)}</span>
         </button>` : ""}
-        <div class="scene-tip">點人物或發光物件互動</div>
+        <div class="arcade-key-hint"><strong>你正在控制護理長</strong><span>${esc(this.data.scene?.controls?.keyboard || "方向鍵／WASD")} 移動</span></div>
+        <div class="scene-proximity" data-proximity aria-live="polite">靠近同仁或物件</div>
+        <div class="arcade-controls" aria-label="人物移動控制器">
+          <div class="virtual-stick" data-joystick role="application" tabindex="0" aria-label="拖曳虛擬搖桿移動護理長"><span data-joystick-knob></span></div>
+          <button class="arcade-interact" data-arcade-interact disabled aria-label="尚未靠近可互動目標"><b>互動</b><kbd>${esc(this.data.scene?.controls?.interactKey || "E")}</kbd></button>
+        </div>
       </section>`;
   }
 
@@ -376,6 +416,190 @@ export class GameUI {
     this.root.querySelectorAll("[data-visitor]").forEach(button => {
       button.addEventListener("click", () => this.showVisitor(engine.currentEvent(), button.dataset.visitor));
     });
+  }
+
+  stopSceneController() {
+    this.sceneControllerCleanup?.();
+    this.sceneControllerCleanup = null;
+  }
+
+  startSceneController(engine) {
+    const scene = this.root.querySelector(".sim-scene");
+    const manager = scene?.querySelector("[data-manager]");
+    const joystick = scene?.querySelector("[data-joystick]");
+    const joystickKnob = scene?.querySelector("[data-joystick-knob]");
+    const interactButton = scene?.querySelector("[data-arcade-interact]");
+    const proximity = scene?.querySelector("[data-proximity]");
+    if (!scene || !manager || !joystick || !joystickKnob || !interactButton || !proximity) return;
+
+    const controls = this.data.scene?.controls || {};
+    const start = controls.start || { x: 50, y: 50 };
+    if (this.controlledEngine !== engine || !this.playerPosition) {
+      this.controlledEngine = engine;
+      this.playerPosition = {
+        x: Number.isFinite(start.x) ? start.x : 50,
+        y: Number.isFinite(start.y) ? start.y : 50
+      };
+    }
+
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const keys = new Set();
+    const targets = [...scene.querySelectorAll("[data-scene-target]")].map(element => ({
+      element,
+      x: Number(element.dataset.targetX),
+      y: Number(element.dataset.targetY),
+      label: element.dataset.targetLabel || "現場目標",
+      type: element.dataset.sceneTarget
+    }));
+    let joystickInput = { x: 0, y: 0 };
+    let activePointer = null;
+    let nearestTarget = null;
+    let animationFrame = 0;
+    let previousTime = performance.now();
+    let lastStepAt = 0;
+
+    const setManagerPosition = () => {
+      manager.style.left = `${this.playerPosition.x}%`;
+      manager.style.top = `${this.playerPosition.y}%`;
+      manager.style.zIndex = String(5 + Math.round(this.playerPosition.y / 25));
+    };
+
+    const updateProximity = () => {
+      nearestTarget = findNearestSceneTarget(
+        this.playerPosition,
+        targets,
+        Number.isFinite(controls.interactionRadius) ? controls.interactionRadius : 14
+      );
+      targets.forEach(target => target.element.classList.toggle("nearby", target.element === nearestTarget?.element));
+      interactButton.disabled = !nearestTarget;
+      if (nearestTarget) {
+        proximity.textContent = `可以互動：${nearestTarget.label}`;
+        proximity.classList.add("ready");
+        interactButton.setAttribute("aria-label", `與${nearestTarget.label}互動`);
+      } else {
+        proximity.textContent = "靠近同仁或物件";
+        proximity.classList.remove("ready", "need-near");
+        interactButton.setAttribute("aria-label", "尚未靠近可互動目標");
+      }
+    };
+
+    const activateNearest = () => {
+      if (document.querySelector(".overlay")) return;
+      if (!nearestTarget) {
+        proximity.textContent = "再靠近一點才能互動";
+        proximity.classList.add("need-near");
+        this.callbacks.onUiCue?.("click");
+        setTimeout(() => updateProximity(), 650);
+        return;
+      }
+      this.callbacks.onUiCue?.("click");
+      nearestTarget.element.click();
+    };
+
+    const movementInput = () => {
+      let x = joystickInput.x;
+      let y = joystickInput.y;
+      if (keys.has("arrowleft") || keys.has("a")) x -= 1;
+      if (keys.has("arrowright") || keys.has("d")) x += 1;
+      if (keys.has("arrowup") || keys.has("w")) y -= 1;
+      if (keys.has("arrowdown") || keys.has("s")) y += 1;
+      return { x, y };
+    };
+
+    const onKeyDown = event => {
+      const key = event.key.toLowerCase();
+      const movementKeys = ["arrowleft", "arrowright", "arrowup", "arrowdown", "a", "d", "w", "s"];
+      if (movementKeys.includes(key)) {
+        if (!document.querySelector(".overlay")) {
+          if (!keys.has(key)) {
+            const tapDirections = {
+              arrowleft: { x: -1, y: 0 }, a: { x: -1, y: 0 },
+              arrowright: { x: 1, y: 0 }, d: { x: 1, y: 0 },
+              arrowup: { x: 0, y: -1 }, w: { x: 0, y: -1 },
+              arrowdown: { x: 0, y: 1 }, s: { x: 0, y: 1 }
+            };
+            this.playerPosition = moveScenePosition(this.playerPosition, tapDirections[key], 0.055, controls);
+            if (tapDirections[key].x < 0) manager.classList.add("facing-left");
+            if (tapDirections[key].x > 0) manager.classList.remove("facing-left");
+            setManagerPosition();
+            updateProximity();
+          }
+          keys.add(key);
+          event.preventDefault();
+        }
+      } else if ((key === "e" || key === "enter") && !event.repeat && !document.querySelector(".overlay")) {
+        event.preventDefault();
+        activateNearest();
+      }
+    };
+    const onKeyUp = event => keys.delete(event.key.toLowerCase());
+    document.addEventListener("keydown", onKeyDown, { signal });
+    document.addEventListener("keyup", onKeyUp, { signal });
+    window.addEventListener("blur", () => keys.clear(), { signal });
+
+    const setJoystickFromPointer = event => {
+      const rect = joystick.getBoundingClientRect();
+      const max = rect.width * 0.31;
+      let dx = event.clientX - (rect.left + rect.width / 2);
+      let dy = event.clientY - (rect.top + rect.height / 2);
+      const distance = Math.hypot(dx, dy);
+      if (distance > max) {
+        dx = dx / distance * max;
+        dy = dy / distance * max;
+      }
+      joystickInput = { x: dx / max, y: dy / max };
+      joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+    };
+    const releaseJoystick = event => {
+      if (activePointer !== null && event.pointerId !== activePointer) return;
+      activePointer = null;
+      joystickInput = { x: 0, y: 0 };
+      joystickKnob.style.transform = "translate(0, 0)";
+      manager.classList.remove("is-moving");
+    };
+    joystick.addEventListener("pointerdown", event => {
+      activePointer = event.pointerId;
+      joystick.setPointerCapture?.(event.pointerId);
+      setJoystickFromPointer(event);
+      event.preventDefault();
+    }, { signal });
+    joystick.addEventListener("pointermove", event => {
+      if (event.pointerId !== activePointer) return;
+      setJoystickFromPointer(event);
+      event.preventDefault();
+    }, { signal });
+    joystick.addEventListener("pointerup", releaseJoystick, { signal });
+    joystick.addEventListener("pointercancel", releaseJoystick, { signal });
+    interactButton.addEventListener("click", activateNearest, { signal });
+
+    const tick = now => {
+      const elapsed = Math.min(0.05, Math.max(0, (now - previousTime) / 1000));
+      previousTime = now;
+      const input = movementInput();
+      const moving = !document.querySelector(".overlay") && Math.hypot(input.x, input.y) > 0.08;
+      manager.classList.toggle("is-moving", moving);
+      if (moving) {
+        this.playerPosition = moveScenePosition(this.playerPosition, input, elapsed, controls);
+        if (input.x < -0.08) manager.classList.add("facing-left");
+        if (input.x > 0.08) manager.classList.remove("facing-left");
+        setManagerPosition();
+        updateProximity();
+        if (now >= lastStepAt + 310) {
+          this.callbacks.onUiCue?.("step");
+          lastStepAt = now;
+        }
+      }
+      animationFrame = requestAnimationFrame(tick);
+    };
+
+    setManagerPosition();
+    updateProximity();
+    animationFrame = requestAnimationFrame(tick);
+    this.sceneControllerCleanup = () => {
+      abortController.abort();
+      cancelAnimationFrame(animationFrame);
+    };
   }
 
   showManager(state) {
@@ -668,6 +892,7 @@ export class GameUI {
   }
 
   renderEnding(engine) {
+    this.stopSceneController();
     const state = engine.state;
     const ending = this.data.endings.find(item => item.id === state.endingId);
     if (!ending) return;
@@ -706,6 +931,7 @@ export class GameUI {
   }
 
   renderLoadError(error) {
+    this.stopSceneController();
     this.root.className = "app-shell";
     this.root.innerHTML = `
       <main class="load-error">

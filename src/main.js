@@ -1,7 +1,7 @@
-import { createInitialState, loadSave, clearSave } from "./state.js?v=2.2.0";
-import { GameEngine } from "./engine.js?v=2.2.0";
-import { GameUI } from "./ui.js?v=2.2.0";
-import { GameAudio } from "./audio.js?v=2.2.0";
+import { createInitialState, loadSave, clearSave } from "./state.js?v=2.3.4";
+import { GameEngine } from "./engine.js?v=2.3.4";
+import { GameUI } from "./ui.js?v=2.3.4";
+import { GameAudio } from "./audio.js?v=2.3.4";
 
 const root = document.querySelector("#app");
 let data = null;
@@ -29,8 +29,9 @@ async function loadData() {
   return { events, actions, staff, scene, fortunes, achievements, endings };
 }
 
-function renderCurrentGame() {
+function renderCurrentGame(resetScroll = false) {
   ui.renderGame(engine);
+  if (resetScroll) requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
   const event = engine.currentEvent();
   const cueKey = event ? `${engine.state.day}:${event.id}` : "";
   if (cueKey && cueKey !== lastEventCue) audio.playEvent(event);
@@ -64,15 +65,17 @@ function showHome() {
 }
 
 function startNewGame() {
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   clearSave();
   lastEventCue = "";
   engine = new GameEngine(createInitialState(data.staff), data);
   const { quitters, ending } = engine.beginDay();
   audio.play("dawn");
-  ui.showDawn(engine.state, quitters, () => ending ? ui.renderEnding(engine) : renderCurrentGame());
+  ui.showDawn(engine.state, quitters, () => ending ? ui.renderEnding(engine) : renderCurrentGame(true));
 }
 
 function continueGame() {
+  window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   const saved = loadSave();
   if (!saved) return startNewGame();
   engine = new GameEngine(saved, data);
@@ -83,10 +86,10 @@ function continueGame() {
   if (engine.state.phase === "dawn") {
     const { quitters, ending } = engine.beginDay();
     audio.play("dawn");
-    ui.showDawn(engine.state, quitters, () => ending ? ui.renderEnding(engine) : renderCurrentGame());
+    ui.showDawn(engine.state, quitters, () => ending ? ui.renderEnding(engine) : renderCurrentGame(true));
     return;
   }
-  renderCurrentGame();
+  renderCurrentGame(true);
 }
 
 function handleChoice(index) {
@@ -141,7 +144,7 @@ function settleDay() {
   }
   const { quitters, ending } = engine.beginDay();
   audio.play("dawn");
-  ui.showDawn(engine.state, quitters, () => ending ? ui.renderEnding(engine) : renderCurrentGame());
+  ui.showDawn(engine.state, quitters, () => ending ? ui.renderEnding(engine) : renderCurrentGame(true));
 }
 
 try {
