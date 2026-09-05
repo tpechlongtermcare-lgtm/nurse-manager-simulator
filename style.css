@@ -193,7 +193,17 @@ button:focus-visible, summary:focus-visible { outline: 3px solid var(--amber); o
   border-radius: 8px;
   pointer-events: none;
 }
-.scene-background { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; }
+.world-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  overflow: hidden;
+  transform: translate3d(0, 0, 0);
+  transform-origin: top left;
+  will-change: transform;
+}
+.scene-background { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
 .scene-shade {
   position: absolute;
   inset: 0;
@@ -230,6 +240,14 @@ button:focus-visible, summary:focus-visible { outline: 3px solid var(--amber); o
   background-size: 200% 200%;
 }
 .manager-figure .manager-sprite { transform: scaleX(var(--facing)); }
+.manager-figure .manager-sprite.pixel-walk-sprite {
+  aspect-ratio: 1;
+  background-size: 400% 400%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  transform: none;
+}
+.manager-burning .manager-sprite.pixel-walk-sprite { animation: pixel-burning .52s steps(2, end) infinite; }
 .manager-happy .manager-sprite { background-position: 0 0; }
 .manager-normal .manager-sprite { background-position: 100% 0; }
 .manager-tired .manager-sprite { background-position: 0 100%; }
@@ -346,6 +364,13 @@ button:focus-visible, summary:focus-visible { outline: 3px solid var(--amber); o
   background-repeat: no-repeat;
   background-size: 300% 600%;
   background-position: var(--sprite-x) var(--sprite-y);
+}
+.npc-sprite.pixel-npc-sprite {
+  aspect-ratio: 1;
+  background-size: 400% 600%;
+  background-position: 0 var(--sprite-y);
+  image-rendering: pixelated;
+  animation: npc-pixel-frames var(--idle-duration, 3.8s) steps(1, end) infinite;
 }
 .npc-name {
   position: relative;
@@ -563,6 +588,7 @@ button:focus-visible, summary:focus-visible { outline: 3px solid var(--amber); o
   filter: brightness(1.08) drop-shadow(0 0 5px white) drop-shadow(0 0 8px #F2B83C);
 }
 .scene-hotspot.nearby { color: #4D350A; background: var(--amber); animation: target-ready .62s ease-in-out infinite alternate; }
+.rotate-device { display: none; }
 .status-strip {
   display: flex; justify-content: space-between; gap: 10px; align-items: center;
   min-height: 44px; font-size: .76rem; color: var(--muted); padding: 0 0 10px 4px;
@@ -650,6 +676,21 @@ button:focus-visible, summary:focus-visible { outline: 3px solid var(--amber); o
 .event-subtitle { font-family: var(--serif); font-style: italic; color: #697178; transform: rotate(-.5deg); margin: 0 0 18px; }
 .event-text { line-height: 1.85; margin: 0 0 23px; }
 .fatigue-aside { margin: -8px 0 20px; color: #77736C; font-size: .84rem; font-style: italic; }
+.scene-mission {
+  display: grid;
+  gap: 3px;
+  margin: -7px 0 16px;
+  padding: 10px 11px;
+  color: #5D430E;
+  background: #FFF0B9;
+  border: 2px solid #C38A21;
+  box-shadow: 3px 3px 0 rgba(91,60,14,.16);
+}
+.scene-mission span { color: #91610D; font-size: .62rem; font-weight: 900; letter-spacing: .12em; }
+.scene-mission strong { font-size: .82rem; line-height: 1.45; }
+.scene-mission small { color: #795F2F; font-size: .65rem; }
+.scene-mission.complete { color: #174D47; background: #DDF2E7; border-color: #24806F; box-shadow: 3px 3px 0 rgba(22,118,104,.14); }
+.scene-mission.complete span, .scene-mission.complete small { color: #2A7165; }
 .choice-list { display: grid; gap: 9px; }
 .choice-btn {
   display: grid; grid-template-columns: 20px 1fr; align-items: start; gap: 5px;
@@ -844,6 +885,9 @@ button:focus-visible, summary:focus-visible { outline: 3px solid var(--amber); o
   width: min(84vw, 320px); background: #FFFDF7; border: 1px solid #8F8A80; padding: 10px 12px;
   box-shadow: 6px 7px 0 rgba(50,45,35,.1); font-size: .8rem;
 }
+.mission-toast { display: grid; gap: 2px; max-width: min(90vw, 420px); text-align: left; }
+.mission-toast strong { color: #FFE095; font-size: .7rem; letter-spacing: .12em; }
+.mission-toast span { line-height: 1.4; }
 
 .burning .play-column, .burning .top-sheet { filter: saturate(.52); }
 .burning .stress-dock { filter: none; }
@@ -872,7 +916,14 @@ code { background: #E9E5DC; padding: 2px 5px; }
 @keyframes manager-rattle { from { transform: scaleX(var(--facing, 1)) rotate(-1.2deg) translateX(-1px); } to { transform: scaleX(var(--facing, 1)) rotate(1.2deg) translateX(1px); } }
 @keyframes manager-idle { 0%, 100% { transform: translate(-50%, -50%) translateY(0); } 50% { transform: translate(-50%, -50%) translateY(-3px); } }
 @keyframes manager-walk { from { transform: translate(-50%, -50%) translateY(1px) rotate(-1.2deg); } to { transform: translate(-50%, -50%) translateY(-4px) rotate(1.2deg); } }
+@keyframes pixel-burning { 50% { filter: saturate(.55) drop-shadow(0 0 5px rgba(187,42,37,.8)); } }
 @keyframes npc-idle { 0%, 100% { transform: translate(-50%, -50%) scale(var(--scene-scale)) translate(0, 0) rotate(0); } 45% { transform: translate(-50%, -50%) scale(var(--scene-scale)) translate(var(--roam-x), var(--roam-y)) rotate(-.8deg); } 55% { transform: translate(-50%, -50%) scale(var(--scene-scale)) translate(var(--roam-x), calc(var(--roam-y) - 2px)) rotate(.7deg); } }
+@keyframes npc-pixel-frames {
+  0%, 100% { background-position: 0 var(--sprite-y); }
+  25% { background-position: 33.333% var(--sprite-y); }
+  50% { background-position: 66.667% var(--sprite-y); }
+  75% { background-position: 100% var(--sprite-y); }
+}
 @keyframes npc-celebrate { 0%, 100% { transform: translate(-50%, -50%) scale(var(--scene-scale)); } 45% { transform: translate(-50%, -58%) scale(var(--scene-scale)) rotate(-3deg); } 70% { transform: translate(-50%, -54%) scale(var(--scene-scale)) rotate(3deg); } }
 @keyframes npc-flinch { 0%, 100% { transform: translate(-50%, -50%) scale(var(--scene-scale)); } 35% { transform: translate(-56%, -50%) scale(var(--scene-scale)) rotate(-2deg); } 70% { transform: translate(-44%, -50%) scale(var(--scene-scale)) rotate(2deg); } }
 @keyframes npc-busy { 0%, 100% { transform: translate(-50%, -50%) scale(var(--scene-scale)); } 45% { transform: translate(-44%, -52%) scale(var(--scene-scale)) rotate(2deg); } 70% { transform: translate(-55%, -49%) scale(var(--scene-scale)) rotate(-1deg); } }
@@ -885,6 +936,7 @@ code { background: #E9E5DC; padding: 2px 5px; }
 @keyframes visitor-wait { 0%, 100% { transform: translate(-50%, -50%) scale(var(--visitor-scale)) rotate(0); } 50% { transform: translate(-50%, -52%) scale(var(--visitor-scale)) rotate(.7deg); } }
 @keyframes target-ready { to { box-shadow: 0 0 0 6px rgba(242,184,60,.3), 0 5px 13px rgba(25,45,40,.32); } }
 @keyframes proximity-shake { 50% { transform: translateX(-3px); } }
+@keyframes rotate-hint { 50% { transform: rotate(90deg) scale(1.08); } }
 @keyframes flash-pos { 50% { background: rgba(23,121,109,.16); } }
 @keyframes flash-neg { 50% { background: rgba(200,32,28,.13); } }
 
@@ -901,6 +953,81 @@ code { background: #E9E5DC; padding: 2px 5px; }
   .sim-scene { position: sticky; top: 190px; }
   .status-strip { padding-top: 0; }
   .event-paper, .action-paper { box-shadow: 0 18px 42px var(--shadow), 7px 8px 0 rgba(255,255,255,.22); }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  body { overflow: hidden; }
+  .game { min-height: 100vh; padding-bottom: 0; }
+  .top-sheet {
+    position: fixed;
+    top: 4px;
+    left: 5px;
+    right: 5px;
+    z-index: 18;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.5);
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(26,38,36,.2);
+  }
+  .day-line { gap: 10px; padding: 4px 9px; }
+  .day-label { font-size: .83rem; }
+  .day-progress { margin-top: 2px; }
+  .ap-caption { font-size: .57rem; }
+  .ap-dot { width: 9px; height: 9px; }
+  .fortune { display: none; }
+  .meters { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px 7px; padding: 4px 8px 5px; }
+  .meter-row, .meter-row:last-child { grid-column: auto; grid-template-columns: 25px 1fr 18px; gap: 3px; font-size: .54rem; }
+  .meter-track { height: 4px; }
+  .game-main { width: 100%; height: 100vh; padding: 4px 5px 44px; }
+  .world-layout { height: 100%; grid-template-columns: minmax(0, 1fr) minmax(240px, 38vw); gap: 6px; align-items: stretch; }
+  .sim-scene { position: relative; top: auto; height: 100%; aspect-ratio: auto; border-radius: 8px; }
+  .play-column { height: 100%; min-height: 0; overflow-y: auto; padding-top: 67px; overscroll-behavior: contain; }
+  .status-strip { min-height: 34px; padding: 0 2px 3px; font-size: .62rem; }
+  .status-strip button { min-width: 36px; min-height: 34px; padding: 4px; font-size: .66rem; }
+  .status-strip .sound-btn { min-width: 32px; }
+  .status-strip .sound-btn span { width: 22px; height: 22px; }
+  .burden-strip { margin-bottom: 6px; padding: 6px 8px; }
+  .burden-head { display: block; margin-bottom: 4px; }
+  .burden-head span { display: none; }
+  .burden-counts span { padding: 3px 4px; font-size: .55rem; }
+  .event-paper, .action-paper { padding: 17px 12px 14px 16px; }
+  .event-paper h2, .action-paper h2 { margin: 7px 0; font-size: 1.25rem; }
+  .event-text { margin: 8px 0 11px; font-size: .78rem; line-height: 1.55; }
+  .scene-mission { margin: -2px 0 8px; padding: 7px 8px; }
+  .scene-mission strong { font-size: .7rem; }
+  .scene-mission small { display: none; }
+  .choice-btn { padding: 8px 5px; }
+  .choice-copy { font-size: .74rem; }
+  .stress-dock { z-index: 19; padding: 4px 10px calc(4px + env(safe-area-inset-bottom)); }
+  .stress-inner { grid-template-columns: auto 1fr 28px auto; gap: 6px; }
+  .stress-label { font-size: .72rem; }
+  .stress-track { height: 9px; }
+  .stress-value { font-size: .75rem; }
+  .stress-status { font-size: .55rem; }
+  .arcade-key-hint, .scene-proximity { top: 68px; }
+  .arcade-controls { bottom: 9px; }
+  .manager-figure .manager-sprite { width: clamp(66px, 10vw, 88px); }
+  .npc-figure { width: clamp(48px, 7.8vw, 70px); }
+  .npc-name, .manager-label { font-size: .52rem; }
+}
+
+@media (orientation: portrait) and (max-width: 700px) {
+  .rotate-device {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 8px;
+    padding: 28px;
+    color: white;
+    background: linear-gradient(145deg, #103F53, #17627A);
+    text-align: center;
+  }
+  .rotate-device span { font-size: 4rem; line-height: 1; animation: rotate-hint 1.6s ease-in-out infinite; }
+  .rotate-device strong { font-family: var(--serif); font-size: 1.35rem; }
+  .rotate-device small { color: rgba(255,255,255,.72); }
 }
 
 @media (max-width: 360px) {

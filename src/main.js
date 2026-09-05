@@ -1,7 +1,7 @@
-import { createInitialState, loadSave, clearSave } from "./state.js?v=2.3.4";
-import { GameEngine } from "./engine.js?v=2.3.4";
-import { GameUI } from "./ui.js?v=2.3.4";
-import { GameAudio } from "./audio.js?v=2.3.4";
+import { createInitialState, loadSave, clearSave } from "./state.js?v=3.0.0";
+import { GameEngine } from "./engine.js?v=3.0.0";
+import { GameUI } from "./ui.js?v=3.0.0";
+import { GameAudio } from "./audio.js?v=3.0.0";
 
 const root = document.querySelector("#app");
 let data = null;
@@ -47,6 +47,7 @@ function createUI() {
     onSettle: settleDay,
     onHome: showHome,
     onSceneAction: handleSceneAction,
+    onSceneObjective: handleSceneObjective,
     onNpcInteraction: handleNpcInteraction,
     onUiCue: cue => audio.play(cue),
     onSoundToggle: toggleSound,
@@ -121,6 +122,12 @@ function handleAction(actionId, sound = "click") {
 
 function handleSceneAction(actionId, sound) {
   handleAction(actionId, sound || "click");
+}
+
+function handleSceneObjective(outcome) {
+  audio.play("result");
+  renderCurrentGame();
+  ui.showObjectiveToast(outcome.message);
 }
 
 function handleNpcInteraction(npcId, interactionId) {

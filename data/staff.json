@@ -2,7 +2,9 @@
   "visuals": {
     "sceneImage": "./assets/nursing-station.png",
     "managerSprite": "./assets/nurse-manager-states.png",
-    "staffSprite": "./assets/staff-states.png"
+    "staffSprite": "./assets/staff-states.png",
+    "managerWalkSprite": "./assets/nurse-manager-walk-pixel-v1.png",
+    "staffWalkSprite": "./assets/staff-walk-pixel-v1-draft.png"
   },
   "manager": {
     "name": "你",
@@ -65,32 +67,32 @@
   "staff": [
     {
       "id": "npc_meimei", "name": "小美", "role": "照服員", "trait": "常請假", "traitDesc": "身體不太好，但住民都很喜歡她。", "stamina": 70, "loyalty": 65,
-      "spriteRow": 0, "scene": { "x": 18, "y": 43, "scale": 0.95, "motionX": 7, "motionY": -2 },
+      "spriteRow": 0, "scene": { "x": 19, "y": 31, "scale": 0.72, "motionX": 5, "motionY": 0 },
       "thoughts": { "happy": "阿嬤今天有記得我的名字耶。", "worried": "我等等如果又不舒服，會不會被討厭？", "tired": "我可以先坐三分鐘嗎……", "quit": "這次真的得照顧自己了。" }
     },
     {
       "id": "npc_azhu", "name": "阿珠姐", "role": "照服員", "trait": "二十年資歷", "traitDesc": "技術最好，脾氣也最硬。", "stamina": 82, "loyalty": 58,
-      "spriteRow": 1, "scene": { "x": 31, "y": 24, "scale": 1, "motionX": -5, "motionY": 1 },
+      "spriteRow": 1, "scene": { "x": 12, "y": 56, "scale": 0.76, "motionX": -4, "motionY": 1 },
       "thoughts": { "happy": "這個我做二十年了，交給我。", "worried": "嘴上說沒事的人，通常最有事。", "tired": "腰在抗議，班表還在裝沒聽見。", "quit": "做到這裡，夠了。" }
     },
     {
       "id": "npc_afu", "name": "阿福", "role": "照服員", "trait": "慢工出細活", "traitDesc": "什麼都好，就是每件事都比預計多十分鐘。", "stamina": 78, "loyalty": 72,
-      "spriteRow": 2, "scene": { "x": 45, "y": 18, "scale": 1, "motionX": 6, "motionY": 2 },
+      "spriteRow": 2, "scene": { "x": 63, "y": 31, "scale": 0.76, "motionX": 5, "motionY": 1 },
       "thoughts": { "happy": "慢一點沒關係，做對比較重要。", "worried": "大家是不是在等我快一點？", "tired": "再十分鐘……這次是真的十分鐘。", "quit": "我想把時間還給自己。" }
     },
     {
       "id": "npc_yijun", "name": "怡君", "role": "護理師", "trait": "新人", "traitDesc": "玻璃心，很認真，筆記比交班本還完整。", "stamina": 68, "loyalty": 76,
-      "spriteRow": 3, "scene": { "x": 63, "y": 19, "scale": 0.96, "motionX": -6, "motionY": -2 },
+      "spriteRow": 3, "scene": { "x": 50, "y": 31, "scale": 0.73, "motionX": -5, "motionY": 0 },
       "thoughts": { "happy": "我有把今天的重點都記下來！", "worried": "我是不是又漏掉哪一格？", "tired": "筆記看得懂，腦袋讀不進去。", "quit": "對不起，我真的撐不住了。" }
     },
     {
       "id": "npc_jianhong", "name": "建宏", "role": "護理師", "trait": "可靠", "traitDesc": "什麼都能接，但手機裡已經開著求職網站。", "stamina": 74, "loyalty": 48,
-      "spriteRow": 4, "scene": { "x": 78, "y": 38, "scale": 1, "motionX": 8, "motionY": 1 },
+      "spriteRow": 4, "scene": { "x": 91, "y": 63, "scale": 0.76, "motionX": 5, "motionY": 1 },
       "thoughts": { "happy": "有事就丟過來，我先接。", "worried": "求職網站只是……先開著而已。", "tired": "我還能接，只是會晚一點回。", "quit": "這次換我按下送出。" }
     },
     {
       "id": "npc_lixue", "name": "麗雪", "role": "行政", "trait": "公文之神", "traitDesc": "萬年學不會 Excel，但公文寫得像中央部會發的。", "stamina": 85, "loyalty": 80,
-      "spriteRow": 5, "scene": { "x": 72, "y": 63, "scale": 0.96, "motionX": -5, "motionY": -1 },
+      "spriteRow": 5, "scene": { "x": 24, "y": 70, "scale": 0.73, "motionX": -4, "motionY": -1 },
       "thoughts": { "happy": "公文語氣我幫你修到挑不出來。", "worried": "這份附件的 final 到底是哪一個？", "tired": "先不要叫我開樞紐分析。", "quit": "公文寫完了，我也下線了。" }
     }
   ]

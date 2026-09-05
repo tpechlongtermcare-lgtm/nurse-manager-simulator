@@ -1,7 +1,7 @@
-import { applyEffects, applyStatDelta, evaluateRule, clamp } from "./effects.js?v=2.3.4";
-import { drawDailyEvents, passesChoiceCondition, passesCondition, resolveEvent, weightedDraw } from "./deck.js?v=2.3.4";
-import { applyNpcEffect, markPendingQuits, processMorningQuits, recoverStaff } from "./staff.js?v=2.3.4";
-import { saveGame, loadAchievements, saveAchievements } from "./state.js?v=2.3.4";
+import { applyEffects, applyStatDelta, evaluateRule, clamp } from "./effects.js?v=3.0.0";
+import { drawDailyEvents, passesChoiceCondition, passesCondition, resolveEvent, weightedDraw } from "./deck.js?v=3.0.0";
+import { applyNpcEffect, markPendingQuits, processMorningQuits, recoverStaff } from "./staff.js?v=3.0.0";
+import { saveGame, loadAchievements, saveAchievements } from "./state.js?v=3.0.0";
 
 export class GameEngine {
   constructor(state, data) {
@@ -9,6 +9,7 @@ export class GameEngine {
     this.data = data;
     this.staffSettings = data.staff.settings;
     this.state.npcInteractionsToday ||= {};
+    this.state.sceneObjectives ||= {};
   }
 
   getEvent(id) {
@@ -75,7 +76,39 @@ export class GameEngine {
     return event ? resolveEvent(event, this.state) : null;
   }
 
+  sceneObjectiveStatus(eventId = this.state.currentEventId) {
+    const event = this.getEvent(eventId);
+    const objective = event?.sceneObjective;
+    if (!objective) return { required: false, complete: true, objective: null };
+    const key = `${this.state.day}:${event.id}`;
+    return { required: true, complete: Boolean(this.state.sceneObjectives[key]), objective, key };
+  }
+
+  completeSceneObjective(targetId) {
+    const event = this.getEvent(this.state.currentEventId);
+    if (!event?.sceneObjective || event.sceneObjective.targetId !== targetId) return { completed: false };
+    const status = this.sceneObjectiveStatus(event.id);
+    if (status.complete) return { completed: false, alreadyComplete: true };
+    this.state.sceneObjectives[status.key] = true;
+    this.state.log.push({
+      day: this.state.day,
+      type: "sceneObjective",
+      eventId: event.id,
+      targetId,
+      result: event.sceneObjective.completeText
+    });
+    this.persist();
+    return {
+      completed: true,
+      eventId: event.id,
+      targetId,
+      message: event.sceneObjective.completeText || "現場資訊已確認。"
+    };
+  }
+
   choiceAvailability(choice) {
+    const objective = this.sceneObjectiveStatus();
+    if (objective.required && !objective.complete) return { ok: false, reason: "先完成場景探索" };
     if (!passesChoiceCondition(choice, this.state)) return { ok: false, reason: "目前條件不符" };
     if (choice.requireAP && this.state.ap < choice.requireAP) return { ok: false, reason: `需要 ${choice.requireAP} AP` };
     return { ok: true, reason: "" };

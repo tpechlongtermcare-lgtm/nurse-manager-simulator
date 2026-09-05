@@ -1,4 +1,4 @@
-import { loadAchievements } from "./state.js?v=2.3.4";
+import { loadAchievements } from "./state.js?v=3.0.0";
 
 const METER_LABELS = {
   quality: "品質",
@@ -58,10 +58,23 @@ export function moveScenePosition(position, input, elapsedSeconds, controls = {}
   const unitX = input.x / Math.max(1, length);
   const unitY = input.y / Math.max(1, length);
   const clampValue = (value, min, max) => Math.max(min, Math.min(max, value));
-  return {
+  const target = {
     x: clampValue(position.x + unitX * speed * elapsedSeconds, xMin, xMax),
     y: clampValue(position.y + unitY * speed * verticalSpeed * elapsedSeconds, yMin, yMax)
   };
+  const radius = Number.isFinite(controls.collisionRadius) ? controls.collisionRadius : 0;
+  const blocked = point => (controls.obstacles || []).some(obstacle => (
+    point.x + radius > obstacle.x
+      && point.x - radius < obstacle.x + obstacle.width
+      && point.y + radius > obstacle.y
+      && point.y - radius < obstacle.y + obstacle.height
+  ));
+  if (!blocked(target)) return target;
+  const horizontal = { x: target.x, y: position.y };
+  if (!blocked(horizontal)) return horizontal;
+  const vertical = { x: position.x, y: target.y };
+  if (!blocked(vertical)) return vertical;
+  return { ...position };
 }
 
 export function findNearestSceneTarget(position, targets, radius = 14) {
@@ -183,7 +196,10 @@ export class GameUI {
             <div class="stress-status">${state.meters.stress < 40 ? "尚可呼吸" : state.meters.stress < 80 ? "開始透支" : "燃燒中"}</div>
           </div>
         </section>
-      </main>`;
+      </main>
+      <div class="rotate-device" role="status">
+        <span aria-hidden="true">↻</span><strong>請將手機轉為橫向</strong><small>橫向才能探索完整機構樓層</small>
+      </div>`;
 
     this.bindGameEvents(engine);
     this.applySceneAssets();
@@ -227,10 +243,12 @@ export class GameUI {
     const mood = managerMood(state.meters.stress);
     const managerThought = manager.thoughts?.[mood] || "先處理眼前這件。";
     const visitor = this.getEventVisitor(event);
+    const floorMap = this.data.scene?.visuals?.floorMap || visuals.sceneImage || "";
 
     return `
       <section class="sim-scene" aria-label="護理站人物場景">
-        <img class="scene-background" src="${esc(visuals.sceneImage || "")}" alt="台灣長照機構護理站，桌上有電腦、交班本、電話、藥車、文件與飲料">
+        <div class="world-layer" data-world>
+        <img class="scene-background" src="${esc(floorMap)}" alt="可自由探索的台灣長照機構像素樓層，包含護理站、住民房、會議室、辦公室與餐廳">
         <div class="scene-shade" aria-hidden="true"></div>
         ${(this.data.scene?.hotspots || []).map(hotspot => {
           const action = engine.getAction(hotspot.actionId);
@@ -263,6 +281,7 @@ export class GameUI {
           <span class="visitor-sprite" aria-hidden="true"></span>
           <span class="visitor-name">${esc(visitor.name)}</span>
         </button>` : ""}
+        </div>
         <div class="arcade-key-hint"><strong>你正在控制護理長</strong><span>${esc(this.data.scene?.controls?.keyboard || "方向鍵／WASD")} 移動</span></div>
         <div class="scene-proximity" data-proximity aria-live="polite">靠近同仁或物件</div>
         <div class="arcade-controls" aria-label="人物移動控制器">
@@ -274,10 +293,16 @@ export class GameUI {
 
   applySceneAssets() {
     const visuals = this.data.staff?.visuals || {};
-    const managerSprite = this.root.querySelector(".manager-sprite");
-    if (managerSprite && visuals.managerSprite) managerSprite.style.backgroundImage = `url("${visuals.managerSprite}")`;
+    const managerSprite = this.root.querySelector(".manager-figure .manager-sprite");
+    if (managerSprite && (visuals.managerWalkSprite || visuals.managerSprite)) {
+      managerSprite.style.backgroundImage = `url("${visuals.managerWalkSprite || visuals.managerSprite}")`;
+      managerSprite.classList.toggle("pixel-walk-sprite", Boolean(visuals.managerWalkSprite));
+    }
     this.root.querySelectorAll(".npc-sprite").forEach(sprite => {
-      if (visuals.staffSprite) sprite.style.backgroundImage = `url("${visuals.staffSprite}")`;
+      if (visuals.staffWalkSprite || visuals.staffSprite) {
+        sprite.style.backgroundImage = `url("${visuals.staffWalkSprite || visuals.staffSprite}")`;
+        sprite.classList.toggle("pixel-npc-sprite", Boolean(visuals.staffWalkSprite));
+      }
     });
     this.root.querySelectorAll(".visitor-sprite").forEach(sprite => {
       const visitorSprite = this.data.scene?.visuals?.visitorSprite;
@@ -331,6 +356,7 @@ export class GameUI {
     const burning = state.meters.stress >= 80;
     const fatigue = state.meters.stress >= 50 && state.meters.stress < 80 && state.fortune?.fatigueAside;
     const visitor = this.getEventVisitor(event);
+    const sceneObjective = engine.sceneObjectiveStatus(event.id);
     return `
       <article class="event-paper event-slip">
         <span class="paper-clip" aria-hidden="true"></span>
@@ -348,6 +374,11 @@ export class GameUI {
         ${event.subtitle ? `<p class="event-subtitle">${esc(event.subtitle)}</p>` : ""}
         <p class="event-text">${esc(event.text)}</p>
         ${fatigue ? `<p class="fatigue-aside">${esc(state.fortune.fatigueAside)}</p>` : ""}
+        ${sceneObjective.required ? `<div class="scene-mission ${sceneObjective.complete ? "complete" : ""}" role="status">
+          <span>${sceneObjective.complete ? "線索取得" : "場景探索"}</span>
+          <strong>${esc(sceneObjective.complete ? sceneObjective.objective.completeText : sceneObjective.objective.label)}</strong>
+          <small>${sceneObjective.complete ? "現在可以做決定了。" : "請控制護理長靠近目標，按互動鍵。"}</small>
+        </div>` : ""}
         <div class="choice-list">
           ${event.choices.map((choice, index) => {
             const available = engine.choiceAvailability(choice);
@@ -388,6 +419,20 @@ export class GameUI {
   }
 
   bindGameEvents(engine) {
+    const trySceneObjective = targetId => {
+      const outcome = engine.completeSceneObjective(targetId);
+      if (!outcome.completed) return false;
+      this.callbacks.onSceneObjective?.(outcome);
+      return true;
+    };
+    const activateSceneTarget = (button, fallback) => {
+      if (!button.classList.contains("nearby")) {
+        this.showProximityToast(button.dataset.targetLabel || "目標");
+        return;
+      }
+      if (!trySceneObjective(button.dataset.npc || button.dataset.hotspot || button.dataset.visitor)) fallback();
+    };
+
     this.root.querySelectorAll("[data-choice]").forEach(button => {
       button.addEventListener("click", () => {
         if (button.disabled || button.classList.contains("choice-committed")) return;
@@ -407,14 +452,14 @@ export class GameUI {
     this.root.querySelector("#soundBtn")?.addEventListener("click", this.callbacks.onSoundToggle);
     this.root.querySelector("#homeBtn")?.addEventListener("click", this.callbacks.onHome);
     this.root.querySelectorAll("[data-npc]").forEach(button => {
-      button.addEventListener("click", () => this.showNpc(engine, button.dataset.npc));
+      button.addEventListener("click", () => activateSceneTarget(button, () => this.showNpc(engine, button.dataset.npc)));
     });
     this.root.querySelector("[data-manager]")?.addEventListener("click", () => this.showManager(engine.state));
     this.root.querySelectorAll("[data-hotspot]").forEach(button => {
-      button.addEventListener("click", () => this.showSceneAction(engine, button.dataset.hotspot));
+      button.addEventListener("click", () => activateSceneTarget(button, () => this.showSceneAction(engine, button.dataset.hotspot)));
     });
     this.root.querySelectorAll("[data-visitor]").forEach(button => {
-      button.addEventListener("click", () => this.showVisitor(engine.currentEvent(), button.dataset.visitor));
+      button.addEventListener("click", () => activateSceneTarget(button, () => this.showVisitor(engine.currentEvent(), button.dataset.visitor)));
     });
   }
 
@@ -425,14 +470,19 @@ export class GameUI {
 
   startSceneController(engine) {
     const scene = this.root.querySelector(".sim-scene");
+    const world = scene?.querySelector("[data-world]");
     const manager = scene?.querySelector("[data-manager]");
+    const managerSprite = manager?.querySelector(".manager-sprite");
     const joystick = scene?.querySelector("[data-joystick]");
     const joystickKnob = scene?.querySelector("[data-joystick-knob]");
     const interactButton = scene?.querySelector("[data-arcade-interact]");
     const proximity = scene?.querySelector("[data-proximity]");
-    if (!scene || !manager || !joystick || !joystickKnob || !interactButton || !proximity) return;
+    if (!scene || !world || !manager || !joystick || !joystickKnob || !interactButton || !proximity) return;
 
     const controls = this.data.scene?.controls || {};
+    const worldScale = Number.isFinite(controls.worldScale) ? controls.worldScale : 1;
+    world.style.width = `${worldScale * 100}%`;
+    world.style.height = `${worldScale * 100}%`;
     const start = controls.start || { x: 50, y: 50 };
     if (this.controlledEngine !== engine || !this.playerPosition) {
       this.controlledEngine = engine;
@@ -458,11 +508,33 @@ export class GameUI {
     let animationFrame = 0;
     let previousTime = performance.now();
     let lastStepAt = 0;
+    let facingRow = 0;
+
+    const updateCamera = () => {
+      const worldWidth = world.offsetWidth;
+      const worldHeight = world.offsetHeight;
+      const desiredX = scene.clientWidth / 2 - this.playerPosition.x / 100 * worldWidth;
+      const desiredY = scene.clientHeight / 2 - this.playerPosition.y / 100 * worldHeight;
+      const cameraX = Math.max(scene.clientWidth - worldWidth, Math.min(0, desiredX));
+      const cameraY = Math.max(scene.clientHeight - worldHeight, Math.min(0, desiredY));
+      world.style.transform = `translate3d(${cameraX}px, ${cameraY}px, 0)`;
+    };
 
     const setManagerPosition = () => {
       manager.style.left = `${this.playerPosition.x}%`;
       manager.style.top = `${this.playerPosition.y}%`;
       manager.style.zIndex = String(5 + Math.round(this.playerPosition.y / 25));
+      updateCamera();
+    };
+
+    const updateWalkSprite = (input, moving, now) => {
+      if (!managerSprite?.classList.contains("pixel-walk-sprite")) return;
+      if (moving) {
+        if (Math.abs(input.x) > Math.abs(input.y)) facingRow = input.x < 0 ? 1 : 2;
+        else facingRow = input.y < 0 ? 3 : 0;
+      }
+      const frame = moving ? Math.floor(now / 135) % 4 : 0;
+      managerSprite.style.backgroundPosition = `${frame * 100 / 3}% ${facingRow * 100 / 3}%`;
     };
 
     const updateProximity = () => {
@@ -537,6 +609,7 @@ export class GameUI {
     document.addEventListener("keydown", onKeyDown, { signal });
     document.addEventListener("keyup", onKeyUp, { signal });
     window.addEventListener("blur", () => keys.clear(), { signal });
+    window.addEventListener("resize", updateCamera, { signal });
 
     const setJoystickFromPointer = event => {
       const rect = joystick.getBoundingClientRect();
@@ -579,6 +652,7 @@ export class GameUI {
       const input = movementInput();
       const moving = !document.querySelector(".overlay") && Math.hypot(input.x, input.y) > 0.08;
       manager.classList.toggle("is-moving", moving);
+      updateWalkSprite(input, moving, now);
       if (moving) {
         this.playerPosition = moveScenePosition(this.playerPosition, input, elapsed, controls);
         if (input.x < -0.08) manager.classList.add("facing-left");
@@ -889,6 +963,24 @@ export class GameUI {
     toast.innerHTML = deltas.map(item => `${esc(item.label)} ${item.value > 0 ? "+" : ""}${item.value}`).join("　");
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 1300);
+  }
+
+  showObjectiveToast(message) {
+    document.querySelector(".toast")?.remove();
+    const toast = document.createElement("div");
+    toast.className = "toast mission-toast";
+    toast.innerHTML = `<strong>線索取得</strong><span>${esc(message)}</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2200);
+  }
+
+  showProximityToast(label) {
+    document.querySelector(".toast")?.remove();
+    const toast = document.createElement("div");
+    toast.className = "toast proximity-toast";
+    toast.textContent = `還太遠。先把護理長走到「${label}」旁邊。`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 1600);
   }
 
   renderEnding(engine) {

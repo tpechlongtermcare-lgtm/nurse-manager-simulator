@@ -79,6 +79,10 @@ function withSeed(seed, callback) {
 
 function bestChoiceIndex(engine) {
   const event = engine.getEvent(engine.state.currentEventId);
+  if (event.sceneObjective) {
+    const objective = engine.completeSceneObjective(event.sceneObjective.targetId);
+    assert(objective.completed || objective.alreadyComplete, `事件 ${event.id} 場景目標無法完成`);
+  }
   const meters = engine.state.meters;
   const weights = {
     quality: meters.quality < 35 ? 10 : 3,
@@ -139,6 +143,11 @@ test("data files have valid references and supported fields", () => {
   const roles = new Set(data.staff.staff.map(item => item.role));
   const actionIds = new Set(data.actions.map(item => item.id));
   const visitorIds = new Set(data.scene.visitors.map(item => item.id));
+  const sceneTargetIds = new Set([
+    ...data.scene.hotspots.map(item => item.id),
+    ...data.scene.visitors.map(item => item.id),
+    ...data.staff.staff.map(item => item.id)
+  ]);
 
   assert(data.staff.staff.length === 6, `預期 6 位 NPC，實際 ${data.staff.staff.length}`);
   assert(data.staff.interactions.length >= 3, "NPC 至少需要三種可執行互動");
@@ -154,12 +163,15 @@ test("data files have valid references and supported fields", () => {
     assert(assetPath.startsWith("./assets/"), `${key} 必須使用 assets/ 相對路徑`);
     assert(existsSync(new URL(`../${assetPath.slice(2)}`, import.meta.url)), `${key} 素材不存在：${assetPath}`);
   }
-  assert(Object.keys(data.staff.visuals || {}).length === 3, "場景、護理長與同仁素材路徑必須齊全");
+  assert(Object.keys(data.staff.visuals || {}).length >= 5, "場景、護理長與同仁的原版及像素素材路徑必須齊全");
   assert(existsSync(new URL(`../${data.scene.visuals.visitorSprite.slice(2)}`, import.meta.url)), "訪客人物素材不存在");
+  assert(existsSync(new URL(`../${data.scene.visuals.floorMap.slice(2)}`, import.meta.url)), "大型像素樓層素材不存在");
   assert(data.scene.visitors.length === 3, "應有主任、督導與衛生局稽查員三位訪客");
   assert(data.scene.hotspots.length >= 6, "護理站至少需要六個可互動物件");
   assert(Number.isFinite(data.scene.controls?.speed) && data.scene.controls.speed > 0, "街機移動速度無效");
   assert(Number.isFinite(data.scene.controls?.interactionRadius) && data.scene.controls.interactionRadius > 0, "街機互動距離無效");
+  assert(Number.isFinite(data.scene.controls?.worldScale) && data.scene.controls.worldScale > 1, "大型地圖縮放比例無效");
+  assert(Array.isArray(data.scene.controls?.obstacles) && data.scene.controls.obstacles.length > 0, "場景碰撞區未設定");
   assert(Number.isFinite(data.scene.controls?.start?.x) && Number.isFinite(data.scene.controls?.start?.y), "護理長起始位置無效");
   for (const hotspot of data.scene.hotspots) {
     assert(actionIds.has(hotspot.actionId), `${hotspot.id} 指向不存在的行動 ${hotspot.actionId}`);
@@ -190,6 +202,10 @@ test("data files have valid references and supported fields", () => {
     assert(["daily", "crisis", "followup"].includes(event.type), `${event.id} type 不支援`);
     assert(event.title && event.text, `${event.id} 缺標題或內文`);
     if (event.actor) assert(visitorIds.has(event.actor), `${event.id} 指向不存在訪客 ${event.actor}`);
+    if (event.sceneObjective) {
+      assert(sceneTargetIds.has(event.sceneObjective.targetId), `${event.id} 場景目標不存在：${event.sceneObjective.targetId}`);
+      assert(event.sceneObjective.label && event.sceneObjective.completeText, `${event.id} 場景目標文字不完整`);
+    }
     assert(Array.isArray(event.choices) && event.choices.length >= 2, `${event.id} 至少需要兩個選項`);
     for (const choice of event.choices) {
       assert(choice.label && choice.result, `${event.id} 有選項缺 label/result`);
@@ -246,12 +262,14 @@ test("manager and NPC visual moods follow meter thresholds", () => {
 
 test("arcade movement normalizes diagonals, respects bounds, and finds nearby targets", () => {
   const controls = data.scene.controls;
-  const straight = moveScenePosition({ x: 50, y: 50 }, { x: 1, y: 0 }, 1, controls);
-  const diagonal = moveScenePosition({ x: 50, y: 50 }, { x: 1, y: 1 }, 1, controls);
-  assert(straight.x === 77 && straight.y === 50, "水平移動速度錯誤");
-  assert(diagonal.x < straight.x && diagonal.y > 50, "斜向移動應正規化且同時改變兩軸");
+  const straight = moveScenePosition({ x: 60, y: 82 }, { x: 1, y: 0 }, 1, controls);
+  const diagonal = moveScenePosition({ x: 60, y: 82 }, { x: 1, y: 1 }, 0.25, controls);
+  assert(straight.x === 80 && straight.y === 82, "水平移動速度錯誤");
+  assert(diagonal.x < 65 && diagonal.y > 82, "斜向移動應正規化且同時改變兩軸");
   const bounded = moveScenePosition({ x: 91, y: 83 }, { x: 1, y: 1 }, 1, controls);
   assert(bounded.x === controls.bounds.xMax && bounded.y === controls.bounds.yMax, "人物未限制在場景邊界內");
+  const blocked = moveScenePosition({ x: 29, y: 50 }, { x: 1, y: 0 }, 1, controls);
+  assert(blocked.x === 29, "人物應被護理站碰撞區擋住");
   const nearby = findNearestSceneTarget(
     { x: 50, y: 50 },
     [{ id: "far", x: 80, y: 80 }, { id: "near", x: 55, y: 52 }],
@@ -273,6 +291,24 @@ test("NPC interactions spend AP, change relationship, and cannot repeat on the s
   assert(outcome.bubble === "謝謝你先問我。", "NPC 場景反應文字錯誤");
   assert(engine.interactWithNpc("npc_meimei", "check_in").error === "今天已經做過了", "同日重複互動未被阻止");
   assert(engine.state.log.some(item => item.type === "npcInteraction"), "NPC 互動未寫入日誌");
+});
+
+test("scene objectives block choices until the player reaches the data-driven target", () => {
+  const engine = makeEngine();
+  engine.state.day = 4;
+  engine.state.phase = "events";
+  engine.state.currentEventId = "boss_report";
+  const choice = engine.getEvent("boss_report").choices[0];
+  assert(engine.choiceAvailability(choice).reason === "先完成場景探索", "尚未探索時事件選項未鎖定");
+  assert(!engine.completeSceneObjective("phone").completed, "錯誤場景目標不應完成任務");
+  const outcome = engine.completeSceneObjective("computer");
+  assert(outcome.completed, "正確場景目標未完成任務");
+  assert(engine.sceneObjectiveStatus().complete, "場景目標完成狀態未保存");
+  assert(engine.choiceAvailability(choice).ok, "完成探索後事件選項仍被鎖定");
+  assert(engine.state.log.some(item => item.type === "sceneObjective" && item.targetId === "computer"), "場景探索未寫入日誌");
+
+  engine.state.day = 5;
+  assert(!engine.sceneObjectiveStatus().complete, "場景目標應依天數重新執行");
 });
 
 test("days 1-5 draw one event and stress 80 reduces AP to 3", () => {

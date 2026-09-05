@@ -19,6 +19,7 @@ export function createInitialState(staffData) {
     actionsToday: [],
     actionCountsToday: {},
     npcInteractionsToday: {},
+    sceneObjectives: {},
     endedByGoHome: false,
     abandonedAP: 0,
     fortune: null,
